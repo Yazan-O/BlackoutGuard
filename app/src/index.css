@@ -418,3 +418,93 @@ body {
   text-align: center;
   padding-top: 4px;
 }
+
+.storm {
+  position: fixed;
+  inset: 0;
+  background: #020204;
+  overflow: hidden;
+}
+.storm-canvas {
+  position: absolute !important;
+  inset: 0;
+}
+.storm-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  z-index: 2;
+}
+.storm-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.storm-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  min-width: 420px;
+  max-width: 80vw;
+  z-index: 2;
+  backdrop-filter: none;
+  background: rgba(2, 2, 4, 0.82);
+}
+.storm-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(720px, 86vw);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+}
+.storm-controls .ctrl-scrub {
+  flex: 1;
+}
+.storm-fallback {
+  position: absolute;
+  right: 20px;
+  bottom: 24px;
+  z-index: 2;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--muted);
+}
+.storm-error {
+  display: grid;
+  place-items: center;
+}
+.storm-error-box {
+  max-width: 560px;
+  border: 1px solid var(--red);
+  background: rgba(255, 45, 45, 0.08);
+  border-radius: 10px;
+  padding: 24px;
+  color: var(--text);
+}
+.storm-error-box .banner-tag {
+  background: var(--red);
+  color: #000;
+}
+.storm-error-box p {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.storm-error-box a {
+  color: var(--green);
+}
