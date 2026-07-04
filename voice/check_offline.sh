@@ -14,7 +14,7 @@ say(){ printf '[check_offline] %s\n' "$*"; }
 fail(){ printf '[check_offline] STOP: %s\n' "$*" >&2; exit 1; }
 
 RESTORE=()
-cleanup(){ for c in "${RESTORE[@]}"; do eval "$c" >/dev/null 2>&1 || true; done; [ ${#RESTORE[@]} -gt 0 ] && say "network restored."; }
+cleanup(){ [ ${#RESTORE[@]} -eq 0 ] && return 0; for c in "${RESTORE[@]}"; do eval "$c" >/dev/null 2>&1 || true; done; say "network restored."; }
 trap cleanup EXIT
 
 IFACE=$(ip route 2>/dev/null | awk '/default/{print $5; exit}')
