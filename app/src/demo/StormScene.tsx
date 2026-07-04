@@ -1,19 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { loadClip } from "../fixtures";
 import { EventAssetError, loadEventClip, type EventClip } from "../io/eventsLoader";
 import { EventCloud } from "../three/EventCloud";
 import { DetectionBox } from "../three/DetectionBox";
+import type { Incident } from "../types";
 import { activeIncident, latchedBrake, useDemoStore } from "./demoStore";
-import { useMasterClock } from "./useMasterClock";
+import { film, useFilmTimeline } from "./choreography/timeline";
 import { OfflineBadge } from "../OfflineBadge";
+import { agentConfigured, agentModel } from "../agent";
+import { cachedAdvisory } from "../io/advisories";
+import { soundSpine } from "../io/audio";
+import { useSoundSpine, useSpineStatus } from "./useSoundSpine";
+import { LowerThird, type AdvisoryLine } from "./LowerThird";
 
 export function StormScene({ clipId }: { clipId: string }) {
   const [clip, setClip] = useState<EventClip | null>(null);
   const [error, setError] = useState<string | null>(null);
   const loadTimeline = useDemoStore((s) => s.loadTimeline);
+  const durMs = useDemoStore((s) => s.durMs);
+  const coldOpen = useRef<HTMLDivElement>(null);
 
-  useMasterClock();
+  useFilmTimeline(durMs, coldOpen);
+  useSoundSpine();
+
+  // The sound spine's AudioContext can only start after a gesture (autoplay policy); arm it on the
+  // first one anywhere. enable() is idempotent, so the sound toggle and Play button also trip it.
+  useEffect(() => {
+    const arm = () => soundSpine.enable();
+    window.addEventListener("pointerdown", arm, { once: true });
+    window.addEventListener("keydown", arm, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
 
   useEffect(() => {
     let gone = false;
@@ -25,14 +46,6 @@ export function StormScene({ clipId }: { clipId: string }) {
         const records = loadClip(clipId);
         // fixtures' t_video_s and the binary's t_ms share the window-relative axis → offset 0
         loadTimeline(records, c.meta.dur_ms, 0);
-        // ?t=<ms> jumps straight to a beat (rehearsal/filming); ?hold freezes there
-        const p = new URLSearchParams(location.search);
-        const jump = Number(p.get("t"));
-        if (Number.isFinite(jump) && p.has("t")) {
-          const st = useDemoStore.getState();
-          st.setPlayhead(jump);
-          if (p.has("hold")) st.setPlaying(false);
-        }
         setClip(c);
       })
       .catch((e) => {
@@ -43,6 +56,19 @@ export function StormScene({ clipId }: { clipId: string }) {
       gone = true;
     };
   }, [clipId, loadTimeline]);
+
+  // ?t=<ms> jumps straight to a beat for rehearsal/filming; ?hold freezes there. Applied once the
+  // timeline exists so the seek isn't overwritten by the next clock tick.
+  useEffect(() => {
+    if (durMs <= 0) return;
+    const p = new URLSearchParams(location.search);
+    if (!p.has("t")) return;
+    const jump = Number(p.get("t"));
+    const f = film();
+    if (!f || !Number.isFinite(jump)) return;
+    f.seek(jump);
+    if (p.has("hold")) f.pause();
+  }, [durMs]);
 
   if (error) {
     return (
@@ -82,10 +108,13 @@ export function StormScene({ clipId }: { clipId: string }) {
           <DetectionBox frame={clip.meta.frame} />
         </Canvas>
       )}
+      <div className="film-coldopen" ref={coldOpen} />
       {!clip && <div className="storm-loading">loading event stream…</div>}
 
-      <StormAdvisory />
+      <FilmAdvisory />
+      <UnplugCue />
       <StormControls />
+      <SoundToggle />
       <a className="storm-fallback" href="?simple">
         split-screen view
       </a>
@@ -93,14 +122,58 @@ export function StormScene({ clipId }: { clipId: string }) {
   );
 }
 
-function StormAdvisory() {
-  const inc = useDemoStore((s) => latchedBrake(s) ?? activeIncident(s));
-  if (!inc || (inc.severity !== "brake" && inc.severity !== "caution")) return null;
+function FilmAdvisory() {
+  const subject = useDemoStore((s) => latchedBrake(s) ?? activeIncident(s));
+  const line = useAdvisoryLine(subject);
+  return <LowerThird incident={subject} line={line} />;
+}
+
+// The line the lower-third reads: real advisory text from the committed cache (offline), attributed
+// to the model the live agent reports. No agent → no model → the chip stays hidden (never fabricated).
+function useAdvisoryLine(incident: Incident | null): AdvisoryLine | null {
+  const [model, setModel] = useState<string | null>(null);
+  useEffect(() => {
+    if (!agentConfigured()) return;
+    let cancelled = false;
+    agentModel().then((m) => {
+      if (!cancelled) setModel(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!incident) return null;
+  if (incident.severity !== "caution" && incident.severity !== "brake") return null;
+  const text = cachedAdvisory(incident.incident_id) ?? incident.advisory;
+  if (!text) return null;
+  return { text, live: model !== null, model };
+}
+
+function UnplugCue() {
+  const awaiting = useDemoStore((s) => s.awaitingUnplug);
+  const networkUp = useDemoStore((s) => s.networkUp);
+  if (!awaiting) return null;
   return (
-    <div className={`banner storm-banner ${inc.severity}`}>
-      <span className="banner-tag">{inc.severity === "brake" ? "BRAKE" : "CAUTION"}</span>
-      <span className="banner-text">{inc.advisory ?? "Awaiting advisory from local agent…"}</span>
+    <div className="film-cue">
+      <span>{networkUp ? "pull the network — the vehicle keeps seeing" : "network down · resuming on local Gemma"}</span>
+      <button className="film-cue-resume" onClick={() => film()?.play()}>
+        resume
+      </button>
     </div>
+  );
+}
+
+function SoundToggle() {
+  const { enabled, muted } = useSpineStatus();
+  const label = !enabled ? "enable sound" : muted ? "sound off" : "sound on";
+  return (
+    <button
+      className={`storm-sound ${enabled && !muted ? "on" : ""}`}
+      onClick={() => (soundSpine.enabled ? soundSpine.setMuted(!soundSpine.muted) : soundSpine.enable())}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -108,8 +181,6 @@ function StormControls() {
   const playheadMs = useDemoStore((s) => s.playheadMs);
   const durMs = useDemoStore((s) => s.durMs);
   const playing = useDemoStore((s) => s.playing);
-  const setPlayhead = useDemoStore((s) => s.setPlayhead);
-  const setPlaying = useDemoStore((s) => s.setPlaying);
   const ended = durMs > 0 && playheadMs >= durMs;
 
   return (
@@ -117,8 +188,12 @@ function StormControls() {
       <button
         className="ctrl-btn"
         onClick={() => {
-          if (ended) setPlayhead(0);
-          setPlaying(ended ? true : !playing);
+          const f = film();
+          if (!f) return;
+          if (ended) {
+            f.seek(0);
+            f.play();
+          } else f.toggle();
         }}
       >
         {ended ? "Replay" : playing ? "Pause" : "Play"}
@@ -130,7 +205,7 @@ function StormControls() {
         max={durMs || 1}
         step={16}
         value={playheadMs}
-        onChange={(e) => setPlayhead(Number(e.target.value))}
+        onChange={(e) => film()?.seek(Number(e.target.value))}
       />
       <span className="ctrl-time">t={(playheadMs / 1000).toFixed(2)}s</span>
     </div>

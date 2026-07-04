@@ -12,11 +12,13 @@ export interface DemoState {
   incidents: Incident[];
   clipT0Ms: number; // event-window start on the clip's t_video_s axis
   brakeLatchedId: string | null;
+  awaitingUnplug: boolean; // film is held at the pre-unplug beat, waiting for the judge to pull the cable
 
   setPlayhead: (ms: number) => void;
   setPlaying: (p: boolean) => void;
   loadTimeline: (incidents: Incident[], durMs: number, clipT0Ms: number) => void;
   setNetworkUp: (up: boolean) => void;
+  setAwaitingUnplug: (v: boolean) => void;
 }
 
 export const useDemoStore = create<DemoState>((set, get) => ({
@@ -28,16 +30,22 @@ export const useDemoStore = create<DemoState>((set, get) => ({
   incidents: [],
   clipT0Ms: 0,
   brakeLatchedId: null,
+  awaitingUnplug: false,
 
   setPlayhead: (ms) => {
     const s = get();
     const clamped = Math.max(0, Math.min(s.durMs, ms));
-    // The brake burst is ~0.15s of records — latch it so it holds on screen once crossed.
+    // The brake burst is ~0.15s of records — latch the onset of the most-recent brake episode so it
+    // holds on screen once crossed as one advisory / one spoken wav, not one per 0.03s frame.
     // Scrubbing back before the brake releases the latch (the world stays a pure function of t).
     const videoMs = s.clipT0Ms + clamped;
     let latched: string | null = null;
-    for (const r of s.incidents) {
-      if (r.severity === "brake" && r.t_video_s * 1000 <= videoMs) latched = r.incident_id;
+    const inc = s.incidents;
+    for (let i = 0; i < inc.length; i++) {
+      if (inc[i].t_video_s * 1000 > videoMs) break;
+      if (inc[i].severity === "brake" && (i === 0 || inc[i - 1].severity !== "brake")) {
+        latched = inc[i].incident_id;
+      }
     }
     set({ playheadMs: clamped, brakeLatchedId: latched, playing: s.playing && clamped < s.durMs });
   },
@@ -49,9 +57,11 @@ export const useDemoStore = create<DemoState>((set, get) => ({
       clipT0Ms,
       playheadMs: 0,
       brakeLatchedId: null,
+      awaitingUnplug: false,
       playing: true,
     }),
   setNetworkUp: (up) => set({ networkUp: up }),
+  setAwaitingUnplug: (v) => set({ awaitingUnplug: v }),
 }));
 
 export function activeIncident(s: DemoState): Incident | null {

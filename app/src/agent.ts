@@ -9,6 +9,20 @@ export function agentConfigured(): boolean {
   return typeof BASE === "string" && BASE.length > 0;
 }
 
+// Model tag as the agent reports it (/health) — the provenance chip must never name a model
+// the agent didn't claim, so null (agent absent/down) renders no chip at all.
+export async function agentModel(): Promise<string | null> {
+  if (!BASE) return null;
+  try {
+    const res = await fetch(`${BASE}/health`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data.model === "string" ? data.model : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAdvisory(record: Incident): Promise<string | null> {
   if (!BASE) return null;
   try {

@@ -508,3 +508,137 @@ body {
 .storm-error-box a {
   color: var(--green);
 }
+
+/* Broadcast-style advisory lower-third: full-width bar, severity-escalating. Info never reaches it
+   (only caution/brake carry an advisory); the escalation the film shows is caution -> brake. */
+.lower-third {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 74px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 30px;
+  background: rgba(2, 2, 4, 0.9);
+  border-top: 2px solid var(--line);
+}
+.lower-third.caution {
+  border-top-color: var(--amber);
+  box-shadow: inset 0 3px 0 rgba(245, 165, 36, 0.22);
+}
+.lower-third.brake {
+  border-top-color: var(--red);
+  background: rgba(28, 2, 4, 0.92);
+  box-shadow: inset 0 3px 0 rgba(255, 45, 45, 0.3);
+}
+.lt-tag {
+  flex: none;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-radius: 4px;
+  color: #000;
+}
+.lower-third.caution .lt-tag {
+  background: var(--amber);
+}
+.lower-third.brake .lt-tag {
+  background: var(--red);
+}
+.lt-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.lower-third.caution .lt-text {
+  color: var(--amber);
+}
+.lower-third.brake .lt-text {
+  color: var(--red);
+}
+.lt-caret {
+  display: inline-block;
+  width: 10px;
+  height: 1.02em;
+  margin-left: 5px;
+  vertical-align: text-bottom;
+  background: currentColor;
+  animation: lt-blink 1s step-end infinite;
+}
+@keyframes lt-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.lt-chip {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+/* Cold-open cover — GSAP fades autoAlpha to reveal the storm; opaque until then. */
+.film-coldopen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #020204;
+  pointer-events: none;
+}
+
+/* Judge cue at the pre-unplug pause. */
+.film-cue {
+  position: absolute;
+  left: 50%;
+  top: 70px;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(2, 2, 4, 0.85);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+.film-cue-resume {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.storm-sound {
+  position: absolute;
+  left: 20px;
+  bottom: 24px;
+  z-index: 2;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(2, 2, 4, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.storm-sound.on {
+  color: var(--text);
+}
