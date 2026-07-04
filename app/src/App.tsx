@@ -10,7 +10,7 @@ import { usePlayback } from "./usePlayback";
 import { PlaybackControls } from "./PlaybackControls";
 
 function activeClipId(): string {
-  return new URLSearchParams(location.search).get("clip") ?? "clip03";
+  return new URLSearchParams(location.search).get("clip") ?? "clip_zc09a";
 }
 
 export default function App() {
