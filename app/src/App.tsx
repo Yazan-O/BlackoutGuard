@@ -41,6 +41,7 @@ export default function App() {
     append(`Q: ${question}`, "qa");
     const answer = agentOn ? await askAgent(question, incident.incident_id) : null;
     if (answer) append(`A: ${answer}`, "qa");
+    else if (agentOn) append("agent unreachable — question logged on-device", "system");
     else append("local agent not connected — question logged on-device", "system");
   };
 
@@ -55,7 +56,7 @@ export default function App() {
       </header>
 
       {records.length === 0 ? (
-        <div className="banner brake">
+        <div className="banner info">
           <span className="banner-tag">NO DATA</span>
           <span className="banner-text">No records in contracts/fixtures/{clipId}.json</span>
         </div>

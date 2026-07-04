@@ -1,5 +1,3 @@
-# Save this as `.gitignore` at the root of the BlackoutGuard repo.
-
 # Python
 __pycache__/
 *.py[cod]

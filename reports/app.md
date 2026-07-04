@@ -42,3 +42,10 @@ Nothing. Built entirely against the committed fixture — no Gemma, no devola de
 ## Next
 - When devola is up: copy the clip slice into `app/public/clips/` + add the ~5-line frame draw (the overlay mapping is already in place).
 - When the agent endpoint is up: set `VITE_AGENT_URL`, confirm `/ask` + `/action` shapes, re-verify Q&A end-to-end.
+
+## Review pass (adversarial, fresh eyes)
+Ran a four-lens fresh-eyes review (schema fidelity / offline-integrity / house-rules / build-run), each finding verified. 4 confirmed, 3 fixed, 1 declined:
+- Fixed: the no-data state was styled brake-red — changed to a neutral banner (verified via `?clip=clip99` → muted gray, not red), since red is only the brake advisory.
+- Fixed: the Ask handler now distinguishes "agent unreachable" from "agent not connected", matching the override/dismiss log wording.
+- Fixed: stripped the paste-residue header line from `.gitignore`.
+- Declined (not reachable): dismiss/override state is not reset on a `?clip=` change. There is no in-app clip switcher, so switching clips is a full page reload that resets all state; incident_ids are clip-prefixed, so no cross-clip id collision exists. Adding a reset would be defensive code for a case that can't happen.
