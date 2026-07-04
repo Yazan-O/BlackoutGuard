@@ -19,6 +19,13 @@ dist-ssr/
 !.env.example
 *.key
 
+# Internal planning / playbook — NEVER publish (contains pre-event design + fixture worked-examples)
+CLAUDE.md
+TEAM_BRIEFING.md
+PLAN.md
+DATA.md
+EVENT_KIT/
+
 # Model weights & checkpoints — TOOLS, pulled/downloaded separately, keep the repo small
 *.gguf
 *.pt
