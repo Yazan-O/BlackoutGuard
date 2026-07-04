@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."   # repo root
 
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 GEMMA_MODEL="${GEMMA_MODEL:-gemma4:12b}"
+AGENT_URL="${AGENT_URL:-http://127.0.0.1:8000}"
 PY="${PYTHON:-python3}"
 FIX="contracts/fixtures/clip03.json"
 
@@ -83,6 +84,17 @@ if echo "$LISTEN" | grep -qvE '^(127\.0\.0\.1|\[::1\]):11434$'; then
   echo "$LISTEN"; fail "Ollama is exposed on a non-loopback address — not offline-clean"
 fi
 say "      Ollama bound to loopback only ($(echo "$LISTEN" | tr '\n' ' '))"
+
+say "[full-stack] operator Q&A via the agent server ($AGENT_URL/ask) ..."
+if curl -sf "$AGENT_URL/health" >/dev/null 2>&1; then
+  ANS=$(curl -sf --max-time 60 "$AGENT_URL/ask" -H 'content-type: application/json' \
+        -d '{"question":"How many distinct pedestrians were flagged tonight, and were we blinded?"}' \
+        | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("answer",""))' 2>/dev/null)
+  [ -n "$ANS" ] || fail "agent /ask returned no answer (Gemma down through the agent?)"
+  say "      agent answer: $ANS"
+else
+  say "      agent server not up on $AGENT_URL — bring the stack up with run_demo first (this step proves offline Q&A)"
+fi
 
 echo
 if [ "$DROP_MODE" = iptables ]; then

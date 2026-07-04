@@ -7,6 +7,7 @@ if (-not $env:OLLAMA_MODELS) { $env:OLLAMA_MODELS = Join-Path $HOME "ollama-mode
 $GemmaModel = if ($env:GEMMA_MODEL) { $env:GEMMA_MODEL } else { "gemma4:12b" }
 $OllamaUrl  = if ($env:OLLAMA_URL)  { $env:OLLAMA_URL }  else { "http://localhost:11434" }
 $AppUrl     = if ($env:APP_URL)     { $env:APP_URL }     else { "http://localhost:5173" }
+$AgentUrl   = if ($env:AGENT_URL)   { $env:AGENT_URL }   else { "http://localhost:8000" }
 
 function Say($m)  { Write-Host "[run_demo] $m" }
 function Fail($m) { Write-Host "[run_demo] STOP: $m" -ForegroundColor Red; exit 1 }
@@ -38,17 +39,21 @@ if (-not (Get-ChildItem voice\cache\*.wav -ErrorAction SilentlyContinue)) { Say 
 
 $AgentUp = $false
 if (Test-Path agent\run.py) {
-  Say "starting agent loop ..."
-  $agentProc = Start-Process -WindowStyle Hidden python -ArgumentList "agent\run.py" -PassThru
-  Start-Sleep 1
-  if (-not $agentProc.HasExited) { $AgentUp = $true } else { Say "warning: agent exited immediately" }
-} else { Say "note: agent/run.py not present yet (Lane 2) - skipping agent loop" }
+  Say "starting agent server on $AgentUrl ..."
+  $agentPort = ($AgentUrl -split ':')[-1]
+  $env:AGENT_PORT = $agentPort
+  Start-Process -WindowStyle Hidden python -ArgumentList "agent\run.py" -RedirectStandardOutput "$HOME\bg-agent.log" -RedirectStandardError "$HOME\bg-agent.err.log"
+  # health-check the loopback IPv4 the agent binds (127.0.0.1), not localhost (Windows resolves it ::1 first)
+  foreach ($i in 1..30) { try { Invoke-RestMethod "http://127.0.0.1:$agentPort/health" -TimeoutSec 2 | Out-Null; $AgentUp=$true; break } catch { Start-Sleep 1 } }
+  if (-not $AgentUp) { Say "warning: agent did not answer on http://127.0.0.1:$agentPort/health" }
+} else { Say "note: agent/run.py not present (Lane 2) - operator Q&A local-only" }
 
 $AppUp = $false
 if (Test-Path app\package.json) {
   if (Get-Command npm -ErrorAction SilentlyContinue) {
     if (-not (Test-Path app\node_modules)) { Say "installing app deps (one-time) ..."; Push-Location app; npm install *> $HOME\bg-app-install.log; Pop-Location }
     Say "starting web app (vite) on $AppUrl ..."
+    $env:VITE_AGENT_URL = $AgentUrl
     Start-Process -WindowStyle Hidden -WorkingDirectory app npm -ArgumentList "run","dev"
     foreach ($i in 1..30) { try { Invoke-WebRequest $AppUrl -TimeoutSec 2 -UseBasicParsing | Out-Null; $AppUp=$true; break } catch { Start-Sleep 1 } }
     if (-not $AppUp) { Say "warning: app did not answer on $AppUrl yet" }

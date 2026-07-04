@@ -8,6 +8,7 @@ export OLLAMA_MODELS="${OLLAMA_MODELS:-$HOME/ollama-models}"
 GEMMA_MODEL="${GEMMA_MODEL:-gemma4:12b}"    # laptop/edge tier: gemma4:e4b-it-qat
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 APP_URL="${APP_URL:-http://localhost:5173}"
+AGENT_URL="${AGENT_URL:-http://localhost:8000}"
 PY="${PYTHON:-python3}"
 
 say(){ printf '[run_demo] %s\n' "$*"; }
@@ -38,13 +39,14 @@ ls voice/cache/*.wav >/dev/null 2>&1 || say "warning: no pre-rendered advisories
 
 AGENT_UP=no
 if [ -f agent/run.py ]; then
-  say "starting agent loop ..."
-  nohup "$PY" agent/run.py >"$HOME/bg-agent.log" 2>&1 &
-  agent_pid=$!
-  sleep 1
-  if kill -0 "$agent_pid" 2>/dev/null; then AGENT_UP=yes; else say "warning: agent exited immediately (see $HOME/bg-agent.log)"; fi
+  say "starting agent server on $AGENT_URL ..."
+  agent_port="${AGENT_URL##*:}"
+  AGENT_PORT="$agent_port" nohup "$PY" agent/run.py >"$HOME/bg-agent.log" 2>&1 &
+  # health-check the loopback IPv4 the agent binds (127.0.0.1), not localhost (Windows resolves it ::1 first)
+  for _ in $(seq 30); do curl -sf "http://127.0.0.1:$agent_port/health" >/dev/null 2>&1 && { AGENT_UP=yes; break; }; sleep 1; done
+  [ "$AGENT_UP" = yes ] || say "warning: agent did not answer on http://127.0.0.1:$agent_port/health (see $HOME/bg-agent.log)"
 else
-  say "note: agent/run.py not present yet (Lane 2) — skipping agent loop"
+  say "note: agent/run.py not present (Lane 2) — operator Q&A will be local-only"
 fi
 
 APP_UP=no
@@ -52,7 +54,7 @@ if [ -f app/package.json ]; then
   if command -v npm >/dev/null; then
     [ -d app/node_modules ] || { say "installing app deps (one-time) ..."; ( cd app && npm install >"$HOME/bg-app-install.log" 2>&1 ); }
     say "starting web app (vite) on $APP_URL ..."
-    ( cd app && nohup npm run dev >"$HOME/bg-app.log" 2>&1 & )
+    ( cd app && VITE_AGENT_URL="$AGENT_URL" nohup npm run dev >"$HOME/bg-app.log" 2>&1 & )
     for _ in $(seq 30); do curl -sf "$APP_URL" >/dev/null 2>&1 && { APP_UP=yes; break; }; sleep 1; done
     [ "$APP_UP" = yes ] || say "warning: app did not answer on $APP_URL yet (see $HOME/bg-app.log)"
   else

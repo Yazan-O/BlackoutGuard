@@ -63,3 +63,6 @@ Thumbs.db
 
 # Internal dev-log reports — not part of the submission; keep box names/paths out of the public repo
 reports/
+
+# Full-res event bins (WebGPU tier) — 45MB each, local-only; ship the ~4MB downsampled tier
+app/public/clips/*.events.full.bin

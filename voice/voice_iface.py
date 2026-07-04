@@ -37,14 +37,23 @@ SCRIPTED = {"clip03-000148": "Brake — pedestrian, left."}
 
 
 def prerender_from_fixtures(fixtures_dir="contracts/fixtures"):
-    """Bake a wav for every scripted demo advisory so the beat plays with no synthesis and no network.
-    Renders the scripted money lines plus any advisory already baked into a fixture."""
-    lines = dict(SCRIPTED)
-    for fx in sorted(Path(fixtures_dir).glob("*.json")):
-        for rec in json.loads(fx.read_text(encoding="utf-8")):
-            if rec.get("advisory"):
-                lines[rec["incident_id"]] = rec["advisory"]
-    return [speak(text, cache_key=k) for k, text in lines.items()]
+    """Bake a wav for each money-beat advisory (clip03). Source the advisory text from the agent's cache
+    (agent/cache/<id>.txt — what the agent actually produces) with SCRIPTED as the fallback, so the spoken
+    wav matches the on-screen advisory. Fixtures may carry null advisories (Gemma fills them live). Scoped
+    to the demo clip; add an incident_id to SCRIPTED to voice another clip's line."""
+    root = Path(__file__).resolve().parent.parent
+    cache = root / "agent" / "cache"
+    ids = set(SCRIPTED)
+    clip = Path(fixtures_dir) / "clip03.json"
+    if clip.exists():
+        ids.update(rec["incident_id"] for rec in json.loads(clip.read_text(encoding="utf-8")))
+    out = []
+    for iid in sorted(ids):
+        txt = cache / f"{iid}.txt"
+        text = txt.read_text(encoding="utf-8").strip() if txt.exists() else SCRIPTED.get(iid, "")
+        if text:
+            out.append(speak(text, cache_key=iid))
+    return out
 
 
 if __name__ == "__main__":
