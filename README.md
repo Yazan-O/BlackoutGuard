@@ -1,11 +1,44 @@
 # BlackoutGuard
 
-<!-- hero: video/hero.gif (added with the final cut) -->
-**60-second demo:** _link added when the cut is uploaded (also at the top of [video/EDIT_LIST.md](video/EDIT_LIST.md))._
+![One instant from a night drive: the left RGB camera is dark and blind while the right event camera sees the whole street and the detector boxes the road users.](docs/hero.png)
 
-On an unlit road at night, an RGB camera goes blind — headlights wash out, or there is nothing to expose. BlackoutGuard is an in-vehicle safety agent that keeps seeing through that blindness with an event camera, and reasons about what it sees with **Gemma 4 running locally**. Each near-miss becomes a structured incident record; Gemma turns it into a spoken driver advisory, answers the operator's questions over the night's log, and adapts when the operator overrides a call — all on the vehicle's own compute, with nothing leaving the device. The signature proof: pull the network cable and it keeps seeing, reasoning, and warning.
+**It sees the person your headlights can't — and reasons about it on-device, with the network unplugged.**
 
-Why it matters: pedestrian-detecting automatic braking cuts pedestrian crashes about 27%, but a 2022 IIHS study found **no measurable benefit at night on roads without streetlights** — exactly the condition BlackoutGuard is built for. ([IIHS, Cicchino 2022](https://www.iihs.org/topics/pedestrians-and-bicyclists))
+Built for the Google DeepMind Gemma Edge (on-device) track.
+
+![Gemma Edge on-device track · runs offline · Gemma 4 local · MIT](docs/badges.png)
+
+**60-second demo:** _link added when the cut is uploaded._
+
+---
+
+**The problem.** Cars with pedestrian-detecting automatic braking have about 27% fewer pedestrian crashes, but a 2022 IIHS study found no measurable benefit at night on roads without streetlights ([IIHS, Cicchino 2022](https://www.iihs.org/topics/pedestrians-and-bicyclists)). That is the exact moment headlights and a normal camera give out.
+
+**The move.** An event camera keeps seeing through that blackout — it reports per-pixel brightness changes, not exposed frames. On the vehicle's own compute, Gemma 4 reads each near-miss and turns it into a spoken driver warning.
+
+**The proof.** Pull the network cable on camera and nothing stops: the event camera still sees, Gemma still reasons, the voice still warns. Real recorded DSEC night data, nothing leaves the vehicle.
+
+## How it sees when you can't
+
+The frame at the top is one instant from `clip_zc09a`: on the left, the RGB camera at luma 18 — effectively blind; on the right, the event camera seeing the same street with the detector boxing the road users. That detection becomes a structured incident, and Gemma turns it into an advisory. Every step runs on the device.
+
+```mermaid
+flowchart LR
+  subgraph vehicle["On the vehicle — nothing leaves"]
+    direction LR
+    cam["Event camera"] --> det["Local detector"]
+    det --> inc["Incident record"]
+    inc --> gemma["Gemma 4 · local via Ollama"]
+    gemma --> adv["Advisory"]
+    adv --> voice["On-device voice"]
+  end
+  cloud["Cloud / API"]
+  vehicle -.->|never called| cloud
+```
+
+Here is the event stream itself, rendered on the device — each point is a brightness change a normal camera missed, the red box a road user tracked in the dark:
+
+![The event stream drawn as a field of light points on black, with a red detection box around a road user.](docs/storm.png)
 
 ## Run it
 
@@ -41,7 +74,7 @@ Baked detections are precomputed by our RVT-based detector — a disclosed tool 
 
 Gemma 4 is the reasoning engine, served locally through Ollama (`gemma4:12b`) on the vehicle's own compute — no cloud, no API keys, `http://localhost:11434` only. It does three things over the [incident schema](contracts/incident_schema.json):
 
-- **Advisory.** For each `caution`/`brake` incident, the agent hands Gemma the derived facts (class, side, proximity, confidence, how long the RGB camera has been blind) and Gemma writes one terse spoken warning — e.g. `Brake — pedestrian, left.` The fixture ships that field as `null`; Gemma fills it. The first time an incident is seen Gemma generates the line and the agent caches it ([`agent/cache/`](agent/cache)), so replay serves the same line deterministically with the network unplugged.
+- **Advisory.** For each `caution`/`brake` incident, the agent hands Gemma the derived facts (class, side, proximity, confidence, how long the RGB camera has been blind) and Gemma writes one terse spoken warning — e.g. `Brake — rider in near zone, left side.` The fixture ships that field as `null`; Gemma fills it. The first time an incident is seen Gemma generates the line and the agent caches it ([`agent/cache/`](agent/cache)), so replay serves the same line deterministically with the network unplugged.
 - **Operator Q&A (live).** The operator asks in natural language ("how many times was I blinded near a pedestrian tonight?"); `POST /ask` sends the incident-log digest to Gemma and returns the answer. This is a live local Gemma call each time — no cache — and it works with the network physically down because the model runs on the device.
 - **Override feedback.** When the operator dismisses a low-confidence call, the agent tells Gemma to downgrade the next similar advisory ("Note … low confidence") instead of repeating the caution.
 
