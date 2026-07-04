@@ -1,0 +1,57 @@
+# Save this as `.gitignore` at the root of the BlackoutGuard repo.
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Node / Vite / React
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.key
+
+# Model weights & checkpoints — TOOLS, pulled/downloaded separately, keep the repo small
+*.gguf
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.litertlm
+*.task
+models/
+weights/
+
+# Large raw data — never commit (only baked JSON + compressed demo clips belong in the repo)
+*.h5
+*.hdf5
+*.raw
+*.aedat4
+*.npy
+*.npz
+data/
+datasets/
+
+# Local editing scratch / logs
+video/assets/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# COMMIT these (do NOT ignore) — needed for a fresh clone to run the demo:
+#   contracts/fixtures/*.json   (baked detections)
+#   voice/cache/*.wav           (pre-rendered demo advisories — small, so offline demo runs on clone)
+#   app/public/clips/*.mp4      (compressed demo clips; keep each < 100 MB — GitHub cap; ffmpeg or Git LFS if larger)
