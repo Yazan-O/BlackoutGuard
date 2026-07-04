@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -10,35 +11,44 @@ from agent.gemma_adapter import GEMMA_MODEL
 from agent.situational import Situation
 
 FIXTURES = Path(__file__).resolve().parent.parent / "contracts" / "fixtures"
+ACTIVE_CLIP = os.environ.get("AGENT_CLIP", "clip_zc09a")  # preloaded clip; others load on demand via /advisory
 
 
 class Agent:
     def __init__(self):
         self.sit = Situation()
-        self.loaded = {}  # incident_id -> advisory-filled record; keeps /advisory idempotent
-        self._preload()
+        self.loaded = {}                 # incident_id -> filled record; keeps /advisory idempotent
+        self.lock = threading.Lock()     # one mutable Situation; serialize the background preload vs requests
+        self.ready = False
 
-    def _preload(self):
-        for fp in sorted(FIXTURES.glob("*.json")):
+    def preload(self, clip=ACTIVE_CLIP):
+        fp = FIXTURES / f"{clip}.json"
+        if not fp.exists():
+            print(f"[agent] preload: {fp.name} not found", file=sys.stderr)
+            self.ready = True
+            return
+        try:
+            records = json.loads(fp.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"[agent] preload skip {fp.name}: {e}", file=sys.stderr)
+            records = []
+        for rec in records if isinstance(records, list) else [records]:
             try:
-                records = json.loads(fp.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as e:
-                print(f"[agent] skip {fp.name}: {e}", file=sys.stderr)
-                continue
-            for rec in records if isinstance(records, list) else [records]:
-                try:
-                    self._ingest(rec)
-                except Exception as e:  # a Gemma/Ollama hiccup must not stop the server binding
-                    print(f"[agent] preload {rec.get('incident_id')}: {e}", file=sys.stderr)
+                self._ingest(rec)
+            except Exception as e:  # a Gemma/Ollama hiccup on one record must not stop the rest
+                print(f"[agent] preload {rec.get('incident_id')}: {e}", file=sys.stderr)
+        self.ready = True
+        print(f"[agent] preload done: {len(self.loaded)} incidents from {clip}", file=sys.stderr)
 
     def _ingest(self, rec):
         iid = rec.get("incident_id")
-        if iid in self.loaded:
-            return self.loaded[iid]
-        filled = self.sit.ingest(rec)
-        if iid is not None:
-            self.loaded[iid] = filled
-        return filled
+        with self.lock:
+            if iid in self.loaded:
+                return self.loaded[iid]
+            filled = self.sit.ingest(rec)
+            if iid is not None:
+                self.loaded[iid] = filled
+            return filled
 
     def advisory(self, body):
         if isinstance(body, dict) and "records" in body:
@@ -50,11 +60,13 @@ class Agent:
         return {"records": [self._ingest(r) for r in records]}
 
     def ask(self, body):
-        return {"answer": self.sit.ask(body["question"])}
+        with self.lock:
+            return {"answer": self.sit.ask(body["question"])}
 
     def action(self, body):
         op = body["operator_action"]
-        self.sit.override(body["incident_id"], op["action"], op.get("note"))
+        with self.lock:
+            self.sit.override(body["incident_id"], op["action"], op.get("note"))
         return {"ok": True, "incident_id": body["incident_id"], "action": op["action"]}
 
 
@@ -82,7 +94,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.split("?")[0] == "/health":
-            return self._json(200, {"ok": True, "model": GEMMA_MODEL, "incidents": len(self.agent.loaded)})
+            a = self.agent
+            return self._json(200, {"ok": True, "model": GEMMA_MODEL, "incidents": len(a.loaded), "ready": a.ready})
         self._json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -107,9 +120,10 @@ class Handler(BaseHTTPRequestHandler):
 
 def serve(port):
     Handler.agent = Agent()
-    httpd = HTTPServer(("127.0.0.1", port), Handler)
-    print(f"[agent] serving http://127.0.0.1:{port}  model={GEMMA_MODEL}  incidents={len(Handler.agent.loaded)}",
+    httpd = HTTPServer(("127.0.0.1", port), Handler)  # binds the socket now, before any preload
+    print(f"[agent] serving http://127.0.0.1:{port}  model={GEMMA_MODEL}  (preloading {ACTIVE_CLIP} in background)",
           flush=True)
+    threading.Thread(target=Handler.agent.preload, daemon=True).start()
     httpd.serve_forever()
 
 
