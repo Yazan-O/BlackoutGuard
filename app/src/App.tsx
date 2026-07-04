@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { OperatorAction, Severity } from "./types";
 import { loadClip } from "./fixtures";
 import { OfflineBadge } from "./OfflineBadge";
 import { AdvisoryBanner } from "./AdvisoryBanner";
 import { SplitScreen } from "./SplitScreen";
 import { OperatorConsole, type LogEntry } from "./OperatorConsole";
-import { agentConfigured, askAgent, postAction } from "./agent";
+import { agentConfigured, askAgent, fetchAdvisory, postAction } from "./agent";
 
 function activeClipId(): string {
   return new URLSearchParams(location.search).get("clip") ?? "clip03";
@@ -17,6 +17,7 @@ export default function App() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [overrides, setOverrides] = useState<Set<string>>(new Set());
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [advisories, setAdvisories] = useState<Record<string, string>>({});
 
   // Show the most urgent unhandled incident (brake over caution), not the first in the array,
   // so a multi-record clip surfaces the brake rather than an earlier caution for the same track.
@@ -27,6 +28,24 @@ export default function App() {
       .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.t_video_s - a.t_video_s)[0] ?? null;
   const overridden = incident ? overrides.has(incident.incident_id) : false;
   const agentOn = agentConfigured();
+
+  // Prefer the agent's live advisory (Gemma is the point of the track); fall back to the record's
+  // baked line, then a neutral placeholder. Keyed on incident_id so it's fetched once.
+  useEffect(() => {
+    if (!incident || !agentOn) return;
+    if (incident.severity !== "caution" && incident.severity !== "brake") return;
+    const id = incident.incident_id;
+    let cancelled = false;
+    fetchAdvisory(incident).then((a) => {
+      if (!cancelled && a) setAdvisories((m) => ({ ...m, [id]: a }));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // keyed on the incident id, not the record object (which is recomputed each render)
+  }, [incident?.incident_id, agentOn]);
+
+  const displayedAdvisory = incident ? advisories[incident.incident_id] ?? incident.advisory ?? null : null;
 
   const append = (text: string, kind: LogEntry["kind"]) => setLog((l) => [{ text, kind }, ...l]);
 
@@ -67,7 +86,7 @@ export default function App() {
           <span className="banner-text">No records in contracts/fixtures/{clipId}.json</span>
         </div>
       ) : (
-        <AdvisoryBanner incident={incident} overridden={overridden} />
+        <AdvisoryBanner incident={incident} advisory={displayedAdvisory} overridden={overridden} />
       )}
 
       <SplitScreen incident={incident} />

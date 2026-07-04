@@ -26,6 +26,7 @@ export interface OperatorAction {
 export interface Incident {
   incident_id: string;
   clip_id: string;
+  t_utc?: string | null;
   t_video_s: number;
   frame_idx: number;
   detections: Detection[];

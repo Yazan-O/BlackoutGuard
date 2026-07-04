@@ -1,4 +1,4 @@
-import type { OperatorAction } from "./types";
+import type { Incident, OperatorAction } from "./types";
 
 // The situational-agent lane owns these routes. The app only reaches them when
 // VITE_AGENT_URL is set; the default demo path never touches the network. Any
@@ -7,6 +7,24 @@ const BASE = import.meta.env.VITE_AGENT_URL as string | undefined;
 
 export function agentConfigured(): boolean {
   return typeof BASE === "string" && BASE.length > 0;
+}
+
+export async function fetchAdvisory(record: Incident): Promise<string | null> {
+  if (!BASE) return null;
+  try {
+    const res = await fetch(`${BASE}/advisory`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(record),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Server returns { records: [ <record with advisory filled> ] }; tolerate a flat shape too.
+    const rec = Array.isArray(data?.records) ? data.records[0] : data;
+    return typeof rec?.advisory === "string" ? rec.advisory : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function askAgent(question: string, incidentId: string): Promise<string | null> {
