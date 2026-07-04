@@ -73,8 +73,16 @@ Restored `contracts/fixtures/clip03.json` from the single-record placeholder to 
 by clearing `agent/cache/` and re-piping the fixture — the strings reproduce at temperature 0.2.
 The prior single-record file is archived (not deleted).
 
+## App consumer fix (I made the 1->2 record change, so I closed its blast radius)
+The 2-record fixture demoted the on-camera brake: `app/src/App.tsx` picked `records[0]`, now the caution
+(`000140`, t=4.67), not the brake (`000148`, t=4.93). Changed the selection to the most-urgent unhandled
+incident (brake over caution, tie-break latest time) — `tsc --noEmit && vite build` clean, and the real
+fixture now resolves to `clip03-000148 -> "Brake — pedestrian, left."` The fixture stays chronological.
+
 ## Blocked / next
 - No git remote yet. Pushing to the public `Yazan-O/BlackoutGuard` is the human's step (outward-facing).
-- App lane: the fixture is now 2 records (was 1). Confirm the banner renders the brake incident (`clip03-000148`).
+- Advisory backfill is one team decision: the committed fixture carries the real Gemma advisories (demo-
+  coherent, matches the wav) rather than the §FIXTURE's `advisory:null`. Flip to null if the app reads
+  advisories from the agent/cache instead.
 - Live wiring: app posts `ASK`/`OVERRIDE` to the agent — expose `run.py` behind the `/ask` + `/action`
   routes Lane 3 expects when the endpoint lands.

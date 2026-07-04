@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { OperatorAction } from "./types";
+import type { OperatorAction, Severity } from "./types";
 import { loadClip } from "./fixtures";
 import { OfflineBadge } from "./OfflineBadge";
 import { AdvisoryBanner } from "./AdvisoryBanner";
@@ -18,7 +18,13 @@ export default function App() {
   const [overrides, setOverrides] = useState<Set<string>>(new Set());
   const [log, setLog] = useState<LogEntry[]>([]);
 
-  const incident = records.find((r) => !dismissed.has(r.incident_id)) ?? null;
+  // Show the most urgent unhandled incident (brake over caution), not the first in the array,
+  // so a multi-record clip surfaces the brake rather than an earlier caution for the same track.
+  const severityRank: Record<Severity, number> = { info: 1, caution: 2, brake: 3 };
+  const incident =
+    records
+      .filter((r) => !dismissed.has(r.incident_id))
+      .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.t_video_s - a.t_video_s)[0] ?? null;
   const overridden = incident ? overrides.has(incident.incident_id) : false;
   const agentOn = agentConfigured();
 
