@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import type { OperatorAction, Severity } from "./types";
+import type { OperatorAction } from "./types";
 import { loadClip } from "./fixtures";
 import { OfflineBadge } from "./OfflineBadge";
 import { AdvisoryBanner } from "./AdvisoryBanner";
 import { SplitScreen } from "./SplitScreen";
 import { OperatorConsole, type LogEntry } from "./OperatorConsole";
 import { agentConfigured, askAgent, fetchAdvisory, postAction } from "./agent";
+import { usePlayback } from "./usePlayback";
+import { PlaybackControls } from "./PlaybackControls";
 
 function activeClipId(): string {
   return new URLSearchParams(location.search).get("clip") ?? "clip03";
@@ -19,13 +21,11 @@ export default function App() {
   const [log, setLog] = useState<LogEntry[]>([]);
   const [advisories, setAdvisories] = useState<Record<string, string>>({});
 
-  // Show the most urgent unhandled incident (brake over caution), not the first in the array,
-  // so a multi-record clip surfaces the brake rather than an earlier caution for the same track.
-  const severityRank: Record<Severity, number> = { info: 1, caution: 2, brake: 3 };
-  const incident =
-    records
-      .filter((r) => !dismissed.has(r.incident_id))
-      .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || b.t_video_s - a.t_video_s)[0] ?? null;
+  // Playback drives which frame is live: the box follows the pedestrian and the clip holds on the last
+  // frame (the brake), so the most-urgent incident lands as the climax. A dismissed frame clears its alert.
+  const playback = usePlayback(records);
+  const frame = playback.frame;
+  const incident = frame && !dismissed.has(frame.incident_id) ? frame : null;
   const overridden = incident ? overrides.has(incident.incident_id) : false;
   const agentOn = agentConfigured();
 
@@ -89,7 +89,9 @@ export default function App() {
         <AdvisoryBanner incident={incident} advisory={displayedAdvisory} overridden={overridden} />
       )}
 
-      <SplitScreen incident={incident} />
+      <SplitScreen incident={incident} clipId={clipId} t={playback.t} playing={playback.playing} />
+
+      <PlaybackControls pb={playback} />
 
       <OperatorConsole
         incident={incident}

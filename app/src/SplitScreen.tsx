@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Incident } from "./types";
 import { BlindnessTimer } from "./BlindnessTimer";
 
@@ -9,17 +9,68 @@ const SCALE = CANVAS_W / EVENT_W;
 const CANVAS_H = EVENT_H * SCALE;
 const RED = "#ff2d2d";
 
-export function SplitScreen({ incident }: { incident: Incident | null }) {
-  const rgbRef = useRef<HTMLCanvasElement>(null);
-  const eventRef = useRef<HTMLCanvasElement>(null);
+// The demo clips are one 1280x480 side-by-side render (RGB left, event right); each panel crops its
+// half of the same file. Detection boxes are in event-frame px and overlay the event (right) panel.
+// A missing clip falls back to the labeled placeholder; the overlay draws either way.
+export function SplitScreen({
+  incident,
+  clipId,
+  t,
+  playing,
+}: {
+  incident: Incident | null;
+  clipId: string;
+  t: number;
+  playing: boolean;
+}) {
+  const rgbVid = useRef<HTMLVideoElement>(null);
+  const evtVid = useRef<HTMLVideoElement>(null);
+  const overlay = useRef<HTMLCanvasElement>(null);
+  const [videoOk, setVideoOk] = useState(false);
   const blind = incident?.rgb_blind ?? false;
+  const clipSrc = `${import.meta.env.BASE_URL}clips/${clipId}.mp4`;
 
   useEffect(() => {
-    drawRgb(rgbRef.current!, incident);
-  }, [incident]);
+    setVideoOk(false);
+  }, [clipId]);
 
   useEffect(() => {
-    drawEvent(eventRef.current!, incident);
+    for (const v of [rgbVid.current, evtVid.current]) {
+      if (!v) continue;
+      if (playing) {
+        if (v.paused) v.play().catch(() => {});
+      } else if (!v.paused) {
+        v.pause();
+      }
+      if (Math.abs(v.currentTime - t) > 0.3) {
+        try {
+          v.currentTime = t;
+        } catch {
+          // not seekable yet
+        }
+      }
+    }
+  }, [t, playing]);
+
+  useEffect(() => {
+    const ctx = overlay.current!.getContext("2d")!;
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    if (!incident) return;
+    ctx.font = "12px system-ui, sans-serif";
+    for (const d of incident.detections) {
+      const [x, y, w, h] = d.bbox;
+      const rx = x * SCALE;
+      const ry = y * SCALE;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = RED;
+      ctx.strokeRect(rx, ry, w * SCALE, h * SCALE);
+      const tag = `${d.class_name} ${d.confidence.toFixed(2)}`;
+      const tw = ctx.measureText(tag).width;
+      ctx.fillStyle = RED;
+      ctx.fillRect(rx, ry - 16, tw + 8, 15);
+      ctx.fillStyle = "#000";
+      ctx.fillText(tag, rx + 4, ry - 4);
+    }
   }, [incident]);
 
   return (
@@ -30,10 +81,21 @@ export function SplitScreen({ incident }: { incident: Incident | null }) {
           <span className={`panel-state ${blind ? "blind" : "live"}`}>{blind ? "BLIND" : "LIVE"}</span>
         </div>
         <div className="canvas-wrap">
-          <canvas ref={rgbRef} width={CANVAS_W} height={CANVAS_H} />
-          {incident && blind && (
-            <BlindnessTimer durationS={incident.blindness_duration_s} incidentId={incident.incident_id} />
+          <video
+            ref={rgbVid}
+            className="clip-video half-left"
+            src={clipSrc}
+            muted
+            playsInline
+            preload="auto"
+            style={{ display: videoOk ? "block" : "none" }}
+            onLoadedData={() => setVideoOk(true)}
+            onError={() => setVideoOk(false)}
+          />
+          {!videoOk && (
+            <div className="clip-placeholder">{blind ? "RGB CAMERA · BLIND" : "RGB feed · clip asset pending"}</div>
           )}
+          {incident && blind && <BlindnessTimer targetS={incident.blindness_duration_s} />}
         </div>
       </section>
 
@@ -43,52 +105,21 @@ export function SplitScreen({ incident }: { incident: Incident | null }) {
           <span className="panel-state sees">SEES</span>
         </div>
         <div className="canvas-wrap">
-          <canvas ref={eventRef} width={CANVAS_W} height={CANVAS_H} />
+          <video
+            ref={evtVid}
+            className="clip-video half-right"
+            src={clipSrc}
+            muted
+            playsInline
+            preload="auto"
+            style={{ display: videoOk ? "block" : "none" }}
+            onLoadedData={() => setVideoOk(true)}
+            onError={() => setVideoOk(false)}
+          />
+          {!videoOk && <div className="clip-placeholder">event stream · clip asset pending</div>}
+          <canvas ref={overlay} className="overlay" width={CANVAS_W} height={CANVAS_H} />
         </div>
       </section>
     </div>
   );
-}
-
-function drawRgb(cv: HTMLCanvasElement, inc: Incident | null) {
-  const ctx = cv.getContext("2d")!;
-  const blind = inc?.rgb_blind ?? false;
-  ctx.fillStyle = blind ? "#050506" : "#1a1c22";
-  ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.fillStyle = "#4a4d57";
-  ctx.font = "13px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(blind ? "RGB CAMERA · BLIND" : "RGB feed · clip asset pending", cv.width / 2, cv.height / 2);
-}
-
-function drawEvent(cv: HTMLCanvasElement, inc: Incident | null) {
-  const ctx = cv.getContext("2d")!;
-  ctx.fillStyle = "#050506";
-  ctx.fillRect(0, 0, cv.width, cv.height);
-
-  // Real event-camera frames drop into this same 640x480 logical space when the
-  // devola asset slice lands; the detection boxes below are real fixture data.
-  ctx.fillStyle = "#3a3d46";
-  ctx.font = "12px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("event stream · clip asset pending", cv.width / 2, 18);
-
-  if (!inc) return;
-  ctx.textAlign = "left";
-  for (const d of inc.detections) {
-    const [x, y, w, h] = d.bbox;
-    const rx = x * SCALE;
-    const ry = y * SCALE;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = RED;
-    ctx.strokeRect(rx, ry, w * SCALE, h * SCALE);
-
-    const tag = `${d.class_name} ${d.confidence.toFixed(2)}`;
-    ctx.font = "12px system-ui, sans-serif";
-    const tw = ctx.measureText(tag).width;
-    ctx.fillStyle = RED;
-    ctx.fillRect(rx, ry - 16, tw + 8, 15);
-    ctx.fillStyle = "#000";
-    ctx.fillText(tag, rx + 4, ry - 4);
-  }
 }

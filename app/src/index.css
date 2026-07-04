@@ -186,12 +186,43 @@ body {
 }
 .canvas-wrap {
   position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #050506;
+  overflow: hidden;
   line-height: 0;
 }
-.canvas-wrap canvas {
+/* Crop the 1280x480 side-by-side clip: each panel is 640x480 wide, so the video is 2x the panel
+   width; half-left shows the RGB half, half-right shifts one panel-width over to the event half. */
+.clip-video {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: auto;
+  max-width: none;
+}
+.clip-video.half-left {
+  left: 0;
+}
+.clip-video.half-right {
+  left: -100%;
+}
+.clip-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  text-align: center;
+  color: #4a4d57;
+  font-size: 13px;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  display: block;
+  height: 100%;
 }
 
 .blind-timer {
@@ -347,6 +378,38 @@ body {
 }
 .log-system {
   color: var(--amber);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ctrl-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  min-width: 74px;
+}
+.ctrl-btn:hover {
+  border-color: var(--muted);
+}
+.ctrl-scrub {
+  flex: 1;
+  accent-color: var(--red);
+}
+.ctrl-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 66px;
+  text-align: right;
 }
 
 .footer {
