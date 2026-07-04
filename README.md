@@ -9,7 +9,7 @@ Why it matters: pedestrian-detecting automatic braking cuts pedestrian crashes a
 
 ## Run it
 
-Prerequisites: [Ollama](https://ollama.com), Node.js 18+ (`npm`), Python 3.9+.
+Prerequisites: [Ollama](https://ollama.com), Node.js 18+ (`npm`), Python 3.10+.
 
 ```
 ollama pull gemma4:12b     # one-time, needs network; the local reasoning model
