@@ -1,0 +1,357 @@
+:root {
+  --bg: #0a0b0d;
+  --panel: #141519;
+  --panel-2: #1a1c22;
+  --line: #24262e;
+  --text: #e8eaed;
+  --muted: #8a8f98;
+  --red: #ff2d2d;
+  --amber: #f5a524;
+  --green: #22c55e;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand-name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.brand-sub {
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--green);
+  background: rgba(34, 197, 94, 0.12);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.badge-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+}
+.badge-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.badge-text strong {
+  color: var(--green);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.badge-text small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 10px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+}
+.banner-tag {
+  font-weight: 800;
+  font-size: 14px;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+.banner-text {
+  font-size: 22px;
+  font-weight: 700;
+}
+.banner.brake {
+  background: rgba(255, 45, 45, 0.14);
+  border-color: var(--red);
+}
+.banner.brake .banner-tag {
+  background: var(--red);
+  color: #000;
+}
+.banner.brake .banner-text {
+  color: var(--red);
+}
+.banner.caution {
+  background: rgba(245, 165, 36, 0.12);
+  border-color: var(--amber);
+}
+.banner.caution .banner-tag {
+  background: var(--amber);
+  color: #000;
+}
+.banner.caution .banner-text {
+  color: var(--amber);
+}
+.banner.info {
+  background: var(--panel);
+}
+.banner.info .banner-tag {
+  background: var(--muted);
+  color: #000;
+}
+.banner.info .banner-text {
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+.banner.cleared {
+  color: var(--muted);
+  justify-content: center;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.panel-title {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel-state {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.panel-state.blind {
+  color: var(--red);
+  background: rgba(255, 45, 45, 0.15);
+}
+.panel-state.live {
+  color: var(--muted);
+  background: var(--panel-2);
+}
+.panel-state.sees {
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.15);
+}
+.canvas-wrap {
+  position: relative;
+  line-height: 0;
+}
+.canvas-wrap canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.blind-timer {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  border-radius: 8px;
+  line-height: 1;
+}
+.blind-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.blind-value {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.blind-pin {
+  font-size: 11px;
+  color: var(--red);
+  font-weight: 700;
+}
+.blind-timer.pinned {
+  border-color: var(--red);
+  animation: pin-pulse 1s ease-in-out infinite;
+}
+.blind-timer.pinned .blind-value {
+  color: var(--red);
+}
+@keyframes pin-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 45, 45, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 45, 45, 0);
+  }
+}
+
+.console {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.console-incident {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.incident-id {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 700;
+}
+.incident-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+.console-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.btn {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: var(--muted);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn.override {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.btn.dismiss {
+  border-color: var(--red);
+  color: var(--red);
+}
+.console-ask {
+  display: flex;
+  gap: 8px;
+}
+.console-ask input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--sans);
+}
+.console-ask input:focus {
+  outline: none;
+  border-color: var(--muted);
+}
+.btn.ask {
+  border-color: var(--green);
+  color: var(--green);
+}
+.console-agent-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.console-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.console-log li {
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--muted);
+}
+.log-action {
+  color: var(--text);
+}
+.log-qa {
+  color: var(--text);
+}
+.log-system {
+  color: var(--amber);
+}
+
+.footer {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  padding-top: 4px;
+}
