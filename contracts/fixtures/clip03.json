@@ -1,6 +1,6 @@
 [{"incident_id":"clip03-000140","clip_id":"clip03","t_utc":null,"t_video_s":4.67,"frame_idx":140,
   "detections":[{"class_name":"pedestrian","confidence":0.71,"bbox":[318,204,44,120],"track_id":7}],
-  "rgb_blind":true,"blindness_duration_s":1.8,"gps":null,"severity":"caution","advisory":"Caution — pedestrian, left.","operator_action":null},
+  "rgb_blind":true,"blindness_duration_s":1.8,"gps":null,"severity":"caution","advisory":null,"operator_action":null},
  {"incident_id":"clip03-000148","clip_id":"clip03","t_utc":null,"t_video_s":4.93,"frame_idx":148,
   "detections":[{"class_name":"pedestrian","confidence":0.83,"bbox":[300,198,52,140],"track_id":7}],
-  "rgb_blind":true,"blindness_duration_s":2.1,"gps":null,"severity":"brake","advisory":"Brake — pedestrian, left.","operator_action":null}]
+  "rgb_blind":true,"blindness_duration_s":2.1,"gps":null,"severity":"brake","advisory":null,"operator_action":null}]

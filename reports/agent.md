@@ -10,9 +10,10 @@ Model tag confirmed empirically on yorha: `gemma4:12b` (architecture `gemma4`, 1
 Ollama serves at `http://localhost:11434`. No fallback tag needed.
 
 ## CP1 — advisory live (network up)
-`gemma4:12b`, warmed, fixture piped through `run.py` on yorha:
+`gemma4:12b`, warmed, fixture piped through `run.py --replay` on yorha (`--replay` = the stdin path; the
+default invocation now starts the HTTP server, see below):
 ```
-$ cat contracts/fixtures/clip03.json | python3 -m agent.run
+$ cat contracts/fixtures/clip03.json | python3 -m agent.run --replay
 {... "incident_id":"clip03-000140" ... "advisory": "Caution — pedestrian, left." ...}
 {... "incident_id":"clip03-000148" ... "advisory": "Brake — pedestrian, left." ...}
 ```
@@ -66,12 +67,30 @@ returns **empty `content`** (`done_reason=length`, even at num_predict=256). Lan
 and seeded `agent/gemma_adapter.py` with `"think": false` (one added key, locked signature unchanged);
 `think:false` returns the terse advisory directly (`done_reason=stop`, ~0.7 s). Kept as-is.
 
-## Fixture change (flag for app / voice lanes)
-Restored `contracts/fixtures/clip03.json` from the single-record placeholder to the frozen 2-record
-§FIXTURE (same tracked pedestrian, track 7, caution→brake) — the dedupe demo needs both frames. The
-`advisory` fields are backfilled with the real Gemma output above (matches the committed wav); regenerate
-by clearing `agent/cache/` and re-piping the fixture — the strings reproduce at temperature 0.2.
-The prior single-record file is archived (not deleted).
+## Fixture (2 records, `advisory: null` — agent is the live source)
+`contracts/fixtures/clip03.json` is the frozen 2-record §FIXTURE (same tracked pedestrian, track 7,
+caution→brake — the dedupe demo needs both frames), `advisory: null` per the contract. The agent fills
+the advisory live from Gemma; the **source of truth for advisory text is now `agent/cache/<id>.txt`**
+(real Gemma output, committed): `clip03-000140.txt` = "Caution — pedestrian, left.", `clip03-000148.txt`
+= "Brake — pedestrian, left." The prior single-record placeholder is archived (not deleted).
+
+## HTTP server (`python agent/run.py` — the agent endpoint)
+Default invocation starts an `http.server` on `127.0.0.1:8000` (loopback only, `AGENT_PORT` overrides) and
+**stays up** — the old stdin loop hit EOF under `nohup` and exited, so run_demo's `kill -0` reported the
+agent down. One persistent `Situation`; pre-ingests every `contracts/fixtures/*.json` at startup (cache
+hits, instant, offline). Routes match `app/src/agent.ts` exactly. Verified by doing on yorha:
+```
+[agent] serving http://127.0.0.1:8000  model=gemma4:12b  incidents=2
+GET  /health   -> {"ok": true, "model": "gemma4:12b", "incidents": 2}
+OPTIONS /ask   -> 204 + Access-Control-Allow-Origin/-Methods/-Headers   (browser preflight for a JSON POST)
+POST /advisory -> {"records":[... "advisory":"Caution — pedestrian, left." ..., ... "Brake — pedestrian, left." ...]}
+POST /ask      -> {"answer":"There is 1 pedestrian near-miss ... single road user (track 7) ... RGB-blind window."}
+POST /action   -> {"ok": true, "incident_id": "clip03-000140", "action": "dismiss"}
+```
+`/ask` = `{question, incident_id}` -> `{answer}`; `/action` = `{incident_id, operator_action}` -> 200;
+`/advisory` = a record / array / `{records:[...]}` -> `{records:[filled]}`. CORS on every response, OPTIONS
+preflight handled, Ollama-down returns `502 {error}` (never a fabricated advisory). `--replay` keeps the
+stdin path. Single-threaded on purpose (one mutable `Situation` + a human clicking).
 
 ## App consumer fix (I made the 1->2 record change, so I closed its blast radius)
 The 2-record fixture demoted the on-camera brake: `app/src/App.tsx` picked `records[0]`, now the caution
@@ -79,10 +98,16 @@ The 2-record fixture demoted the on-camera brake: `app/src/App.tsx` picked `reco
 incident (brake over caution, tie-break latest time) — `tsc --noEmit && vite build` clean, and the real
 fixture now resolves to `clip03-000148 -> "Brake — pedestrian, left."` The fixture stays chronological.
 
-## Blocked / next
-- No git remote yet. Pushing to the public `Yazan-O/BlackoutGuard` is the human's step (outward-facing).
-- Advisory backfill is one team decision: the committed fixture carries the real Gemma advisories (demo-
-  coherent, matches the wav) rather than the §FIXTURE's `advisory:null`. Flip to null if the app reads
-  advisories from the agent/cache instead.
-- Live wiring: app posts `ASK`/`OVERRIDE` to the agent — expose `run.py` behind the `/ask` + `/action`
-  routes Lane 3 expects when the endpoint lands.
+## Blocked / next (handoffs — I verified the server side; these are others' one-liners)
+- **Climax toggle (Lane 4):** the app talks to the agent only when `VITE_AGENT_URL` is set. Add
+  `VITE_AGENT_URL=http://localhost:8000` before `npm run dev` in `run_demo.sh`/`.ps1` (optionally swap the
+  agent `kill -0` for `curl -sf http://localhost:8000/health`). Then `/ask` + `/action` (already wired in
+  `agent.ts`) run the "operator asks, Gemma answers" climax end-to-end. I did not touch run_demo — it is
+  under active concurrent edit.
+- **Banner advisory (Team A):** with the fixture `advisory: null`, the banner shows the neutral placeholder
+  until the app fetches `POST /advisory` (returns the filled record) when `VITE_AGENT_URL` is set. Shape above.
+- **Voice prerender (Lane 4):** point the prerender at `agent/cache/<id>.txt`, not the fixture `advisory`
+  field (now null). The committed wavs already match ("Brake — pedestrian, left.").
+- **Offline live-gen (Lane 4):** true unplug needs Ollama on the demo box (`gemma4:e4b-it-qat` edge tier);
+  the committed cache makes replay bulletproof on any box, but live generation offline is the demo-console's setup.
+- No git remote yet. Pushing to public `Yazan-O/BlackoutGuard` is the human's step (outward-facing).
