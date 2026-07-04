@@ -1,0 +1,23 @@
+{
+  "clip_id": "zc09d",
+  "sequence": "zurich_city_09_d",
+  "layout": "x:u16,y:u16,t_ms:f32,pol:u8 LE",
+  "record_bytes": 9,
+  "count": 424897,
+  "count_downsampled": 424897,
+  "count_full": 5098760,
+  "count_in_window": 198851635,
+  "truncated": true,
+  "dur_ms": 15000.0,
+  "frame": [
+    640,
+    480
+  ],
+  "t0_ms": 55000.0,
+  "window_s": [
+    55.0,
+    70.0
+  ],
+  "downsample_stride": 468,
+  "downsample_stride_full": 39
+}

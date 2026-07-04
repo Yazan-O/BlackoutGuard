@@ -1,0 +1,23 @@
+{
+  "clip_id": "zc12a",
+  "sequence": "zurich_city_12_a",
+  "layout": "x:u16,y:u16,t_ms:f32,pol:u8 LE",
+  "record_bytes": 9,
+  "count": 420711,
+  "count_downsampled": 420711,
+  "count_full": 5048525,
+  "count_in_window": 373590780,
+  "truncated": true,
+  "dur_ms": 15000.0,
+  "frame": [
+    640,
+    480
+  ],
+  "t0_ms": 10000.0,
+  "window_s": [
+    10.0,
+    25.0
+  ],
+  "downsample_stride": 888,
+  "downsample_stride_full": 74
+}
