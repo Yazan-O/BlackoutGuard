@@ -60,3 +60,6 @@ Thumbs.db
 #   contracts/fixtures/*.json   (baked detections)
 #   voice/cache/*.wav           (pre-rendered demo advisories — small, so offline demo runs on clone)
 #   app/public/clips/*.mp4      (compressed demo clips; keep each < 100 MB — GitHub cap; ffmpeg or Git LFS if larger)
+
+# Internal dev-log reports — not part of the submission; keep box names/paths out of the public repo
+reports/
