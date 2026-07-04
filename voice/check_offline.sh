@@ -15,7 +15,7 @@ fail(){ printf '[check_offline] STOP: %s\n' "$*" >&2; exit 1; }
 
 RESTORE=()
 cleanup(){ [ ${#RESTORE[@]} -eq 0 ] && return 0; for c in "${RESTORE[@]}"; do eval "$c" >/dev/null 2>&1 || true; done; say "network restored."; }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
 IFACE=$(ip route 2>/dev/null | awk '/default/{print $5; exit}')
 DROP_MODE=none
@@ -54,6 +54,7 @@ msgs = [{"role":"system","content":"You are BlackoutGuard, an on-device driving-
 print(generate(msgs).strip())
 PY
 ) || fail "local Gemma did not answer (is ollama serving and $GEMMA_MODEL pulled?)"
+[ -n "$ADV" ] || fail "local Gemma returned empty content (gemma4:12b reasoning-model failure) — refusing to claim the advisory was generated locally"
 say "      Gemma (local): $ADV"
 
 say "[3/4] cached advisory wav resolves — no synthesis, no network ..."
@@ -75,12 +76,13 @@ else
 fi
 
 say "[4/4] proving Ollama is bound to loopback only ..."
-LISTEN=$(ss -tlnp 2>/dev/null | grep 11434 || true)
+LISTEN=$(ss -tlnH 2>/dev/null | awk '$4 ~ /:11434$/ {print $4}')
 [ -n "$LISTEN" ] || fail "no Ollama listener on :11434"
-if echo "$LISTEN" | grep -Eq '0\.0\.0\.0:11434|\*:11434|(^|[^0-9])(([0-9]{1,3}\.){3}[0-9]{1,3}):11434' && ! echo "$LISTEN" | grep -q '127\.0\.0\.1:11434\|\[::1\]:11434'; then
-  echo "$LISTEN"; fail "Ollama is exposed on a routable address — not offline-clean"
+# fail if ANY :11434 listener's local address is not loopback (catches 0.0.0.0, *, [::], routable IPs)
+if echo "$LISTEN" | grep -qvE '^(127\.0\.0\.1|\[::1\]):11434$'; then
+  echo "$LISTEN"; fail "Ollama is exposed on a non-loopback address — not offline-clean"
 fi
-say "      Ollama listens on 127.0.0.1:11434 only"
+say "      Ollama bound to loopback only ($(echo "$LISTEN" | tr '\n' ' '))"
 
 echo
 if [ "$DROP_MODE" = iptables ]; then

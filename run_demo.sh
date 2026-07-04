@@ -40,7 +40,9 @@ AGENT_UP=no
 if [ -f agent/run.py ]; then
   say "starting agent loop ..."
   nohup "$PY" agent/run.py >"$HOME/bg-agent.log" 2>&1 &
-  AGENT_UP=yes
+  agent_pid=$!
+  sleep 1
+  if kill -0 "$agent_pid" 2>/dev/null; then AGENT_UP=yes; else say "warning: agent exited immediately (see $HOME/bg-agent.log)"; fi
 else
   say "note: agent/run.py not present yet (Lane 2) — skipping agent loop"
 fi
@@ -69,6 +71,6 @@ if [ "$AGENT_UP" = yes ] && [ "$APP_UP" = yes ]; then
   echo "ALL LOCAL — SAFE TO UNPLUG"
 else
   miss=""; [ "$AGENT_UP" = no ] && miss+=" agent(Lane2)"; [ "$APP_UP" = no ] && miss+=" app(Lane3)"
-  echo "PARTIAL STACK — Ollama+Gemma up and local; not yet present:$miss"
-  echo "(Gemma answers locally now; the full 'ALL LOCAL — SAFE TO UNPLUG' fires once agent+app are in the repo.)"
+  echo "PARTIAL STACK — Ollama+Gemma up and local; not up:$miss"
+  echo "(Gemma answers locally now; the full 'ALL LOCAL — SAFE TO UNPLUG' fires once agent+app are up.)"
 fi

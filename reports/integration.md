@@ -63,16 +63,21 @@ OFFLINE CHECK (loopback proof) PASSED — local Gemma answered, cached wav resol
   The pre-rendered wavs are committed, so the demo plays them with no Piper and no network.
 
 ## Scripted spoken line
-Lane 1's committed `contracts/fixtures/clip03.json` now carries `advisory: null` on both records — Gemma fills
-the advisory live (per the schema). The demo's canonical spoken line is **"Brake — pedestrian, left."** (video
-edit list + this lane's contract), held in `voice/voice_iface.py::SCRIPTED` keyed by `incident_id`. The cache is
-keyed by `incident_id`, so a hit plays this canonical wav whatever Gemma generates at runtime — determinism +
-dead-network safety. `python -m voice.voice_iface` re-renders it (plus any advisory a fixture bakes in).
+Lane 1's committed `contracts/fixtures/clip03.json` carries two records: `clip03-000148` (brake,
+"Brake — pedestrian, left.") and `clip03-000140` (caution, "Caution — pedestrian, left."). Both are
+pre-rendered. The canonical spoken lines are also held in `voice/voice_iface.py::SCRIPTED` keyed by
+`incident_id`; the cache is keyed by `incident_id`, so a hit plays the canonical wav whatever Gemma generates
+at runtime — determinism + dead-network safety. `python -m voice.voice_iface` re-renders SCRIPTED plus any
+advisory a fixture carries.
 
 ## Blocked / next
-- `app/` (Lane 3, now in the repo) and `agent/run.py` (Lane 2, not yet) gate the full banner → `run_demo.sh` prints
-  `PARTIAL STACK` until `agent/run.py` lands (it starts `app/` already if present).
-- `agent/gemma_adapter.py` was seeded here (verbatim + `think:false`); Lane 2 owns it. Lane 1 owns the fixture.
+- `agent/run.py` (Lane 2) and `app/` (Lane 3) are both in the repo now. Verified on a clean HEAD checkout on yorha:
+  `run_demo.sh` restarts/warms Gemma and starts the agent; it prints `PARTIAL STACK` there only because yorha has no
+  Node to serve the app. On a Node-capable demo box the full `ALL LOCAL — SAFE TO UNPLUG` fires once the agent stays
+  up and the app answers — the banner is gated on real liveness (agent PID checked, app URL polled), never asserted.
+- Lane 2's `agent/run.py` is a stdin loop; launched with no stdin it exits at EOF, so `run_demo` reports the agent as
+  down (honest) rather than faking it. Keeping it alive for the demo is Lane 2's runtime call (feed stdin / run as a service).
+- `agent/gemma_adapter.py` was seeded here (verbatim + `think:false`, which Lane 2 kept); Lane 2 owns it. Lane 1 owns the fixture.
 - devola assets not needed for this lane (develop against the fixture).
 
 ## The one command a teammate runs

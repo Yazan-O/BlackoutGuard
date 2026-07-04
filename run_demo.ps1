@@ -39,8 +39,9 @@ if (-not (Get-ChildItem voice\cache\*.wav -ErrorAction SilentlyContinue)) { Say 
 $AgentUp = $false
 if (Test-Path agent\run.py) {
   Say "starting agent loop ..."
-  Start-Process -WindowStyle Hidden python -ArgumentList "agent\run.py"
-  $AgentUp = $true
+  $agentProc = Start-Process -WindowStyle Hidden python -ArgumentList "agent\run.py" -PassThru
+  Start-Sleep 1
+  if (-not $agentProc.HasExited) { $AgentUp = $true } else { Say "warning: agent exited immediately" }
 } else { Say "note: agent/run.py not present yet (Lane 2) - skipping agent loop" }
 
 $AppUp = $false
@@ -63,6 +64,6 @@ if ($AgentUp -and $AppUp) {
   $miss = ""
   if (-not $AgentUp) { $miss += " agent(Lane2)" }
   if (-not $AppUp)   { $miss += " app(Lane3)" }
-  Write-Host "PARTIAL STACK - Ollama+Gemma up and local; not yet present:$miss"
-  Write-Host "(Gemma answers locally now; the full '$BANNER' fires once agent+app are in the repo.)"
+  Write-Host "PARTIAL STACK - Ollama+Gemma up and local; not up:$miss"
+  Write-Host "(Gemma answers locally now; the full '$BANNER' fires once agent+app are up.)"
 }

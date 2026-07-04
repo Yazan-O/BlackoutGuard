@@ -18,7 +18,7 @@ def speak(text: str, *, cache_key: str | None = None) -> str:
     If cache_key hits voice/cache/, return the cached wav path — never re-synthesize (determinism + dead-network safety)."""
     key = cache_key or hashlib.sha1(text.encode()).hexdigest()[:16]
     out = _cache_path(key)
-    if out.exists():
+    if out.exists() and out.stat().st_size > 0:   # a 0-byte file = a failed synth, treat as a miss
         return str(out)
     backend = os.environ.get("VOICE_BACKEND", "piper")
     if backend == "piper":
@@ -30,9 +30,9 @@ def speak(text: str, *, cache_key: str | None = None) -> str:
     return str(out)
 
 
-# The demo's scripted spoken advisories, keyed by incident_id (the video's money lines). Fixtures carry
-# advisory=null until Gemma fills it live; the cache is keyed by incident_id, so a hit plays this canonical
-# line whatever Gemma generates at runtime.
+# The demo's scripted spoken advisories, keyed by incident_id (the video's money lines). A fixture may or
+# may not carry a baked advisory; the cache is keyed by incident_id, so a hit plays this canonical line
+# whatever Gemma generates at runtime. prerender renders SCRIPTED plus any advisory a fixture does carry.
 SCRIPTED = {"clip03-000148": "Brake — pedestrian, left."}
 
 
