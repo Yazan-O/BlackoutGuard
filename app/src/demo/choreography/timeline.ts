@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { RefObject } from "react";
 import gsap from "gsap";
+import type * as THREE from "three";
 import { useDemoStore } from "../demoStore";
 
 // The film's master clock. One GSAP timeline advances playheadMs in real time; every layer
@@ -106,4 +107,110 @@ export function useFilmTimeline(durMs: number, coldOpen: RefObject<HTMLElement |
       controls = null;
     };
   }, [durMs, coldOpen]);
+}
+
+// Act II → Act III transition. Separate from the film clock above — it never touches those beats.
+// A single tween pulls the camera back from the flat Storm frame to the poster 3/4 while spacetime
+// lifts the cloud into the block, so the identical flat cloud is seen to rise into a glass monolith.
+export interface MonolithView {
+  camPos: [number, number, number];
+  target: [number, number, number];
+}
+
+interface OrbitLike {
+  target: THREE.Vector3;
+  enabled: boolean;
+  update(): void;
+}
+
+const lerp = (a: number, b: number, s: number) => a + (b - a) * s;
+
+export function runMonolithIntro(
+  camera: THREE.PerspectiveCamera,
+  orbit: OrbitLike,
+  start: MonolithView,
+  end: MonolithView,
+  setSpacetime: (v: number) => void,
+  duration = 3.4,
+): () => void {
+  const proxy = { s: 0 };
+  orbit.enabled = false;
+  camera.position.set(start.camPos[0], start.camPos[1], start.camPos[2]);
+  orbit.target.set(start.target[0], start.target[1], start.target[2]);
+  orbit.update();
+  setSpacetime(0);
+
+  const tween = gsap.to(proxy, {
+    s: 1,
+    duration,
+    ease: "power2.inOut",
+    onUpdate: () => {
+      const s = proxy.s;
+      camera.position.set(
+        lerp(start.camPos[0], end.camPos[0], s),
+        lerp(start.camPos[1], end.camPos[1], s),
+        lerp(start.camPos[2], end.camPos[2], s),
+      );
+      orbit.target.set(
+        lerp(start.target[0], end.target[0], s),
+        lerp(start.target[1], end.target[1], s),
+        lerp(start.target[2], end.target[2], s),
+      );
+      orbit.update();
+      // the lift trails the camera slightly, so the rise reads as a rise rather than a jump-cut
+      setSpacetime(Math.max(0, Math.min(1, (s - 0.12) / 0.82)));
+    },
+    onComplete: () => {
+      orbit.enabled = true;
+    },
+  });
+
+  return () => {
+    tween.kill();
+    orbit.enabled = true;
+  };
+}
+
+// A camera-only ease between two Act III framings (used when toggling monolith ↔ witness), from
+// wherever the camera currently is to `end`. No spacetime change; the block stays whatever it was.
+export function tweenView(
+  camera: THREE.PerspectiveCamera,
+  orbit: OrbitLike,
+  end: MonolithView,
+  duration = 1.4,
+): () => void {
+  const start: MonolithView = {
+    camPos: [camera.position.x, camera.position.y, camera.position.z],
+    target: [orbit.target.x, orbit.target.y, orbit.target.z],
+  };
+  const proxy = { s: 0 };
+  orbit.enabled = false;
+
+  const tween = gsap.to(proxy, {
+    s: 1,
+    duration,
+    ease: "power2.inOut",
+    onUpdate: () => {
+      const s = proxy.s;
+      camera.position.set(
+        lerp(start.camPos[0], end.camPos[0], s),
+        lerp(start.camPos[1], end.camPos[1], s),
+        lerp(start.camPos[2], end.camPos[2], s),
+      );
+      orbit.target.set(
+        lerp(start.target[0], end.target[0], s),
+        lerp(start.target[1], end.target[1], s),
+        lerp(start.target[2], end.target[2], s),
+      );
+      orbit.update();
+    },
+    onComplete: () => {
+      orbit.enabled = true;
+    },
+  });
+
+  return () => {
+    tween.kill();
+    orbit.enabled = true;
+  };
 }
