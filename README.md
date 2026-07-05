@@ -14,11 +14,13 @@ Abdullah Osman · University of Istanbul
 
 </div>
 
-![One instant from a night drive: the left RGB camera is dark and blind while the right event camera sees the whole street and the detector boxes the road users.](docs/hero.png)
+[![One instant from a night drive: the left RGB camera is dark and blind while the right event camera sees the whole street and the detector boxes the road users.](docs/hero.png)](app/public/clips/clip_zc09a.mp4)
 
 <div align="center">
 
 ![Gemma Edge on-device track · runs offline · Gemma 4 local · MIT](docs/badges.png)
+
+▶ **[Watch the raw night clip](app/public/clips/clip_zc09a.mp4)** — real recorded DSEC footage: on the **left**, the RGB camera, blind in the dark; on the **right**, the event camera, still seeing the street. The whole idea in ~15 seconds. _(click to play in GitHub's viewer)_
 
 **60-second demo:** _link added when the cut is uploaded._
 
