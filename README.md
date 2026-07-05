@@ -4,6 +4,8 @@
 
 **It sees the person your headlights can't — and reasons about it on-device, with the network unplugged.**
 
+**Saves lives** where headlights fail · **Local edge**, Gemma 4 on-device · **Privacy-first**, nothing leaves the vehicle
+
 Proud submission to the **Google DeepMind Gemma Edge** on-device track
 
 **Team BlackoutGuard**<br>
