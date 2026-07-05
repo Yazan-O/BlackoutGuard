@@ -28,11 +28,15 @@ Abdullah Osman · University of Istanbul
 
 ---
 
-**The problem.** Cars with pedestrian-detecting automatic braking have about 27% fewer pedestrian crashes, but a 2022 IIHS study found no measurable benefit at night on roads without streetlights ([IIHS, Cicchino 2022](https://www.iihs.org/topics/pedestrians-and-bicyclists)). That is the exact moment headlights and a normal camera give out.
+**The problem.** More than **3 in 4 pedestrians killed on U.S. roads die in the dark** ([NHTSA](https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/813727)) — exactly where headlights and an ordinary camera go blind.
 
 **The move.** An event camera keeps seeing through that blackout — it reports per-pixel brightness changes, not exposed frames. On the vehicle's own compute, Gemma 4 reads each near-miss and turns it into a spoken driver warning.
 
 **The proof.** Pull the network cable on camera and nothing stops: the event camera still sees, Gemma still reasons, the voice still warns. Real recorded DSEC night data, nothing leaves the vehicle.
+
+**Why it's new.** An event camera paired with a *local* LLM that reasons about each near-miss and speaks the warning — event vision handles the dark, Gemma handles the judgment, both on the car's own chip. Nobody else is shipping that pairing.
+
+**Why on-device.** A dark back road is exactly where there's no signal to call. Running Gemma locally isn't a privacy nicety — it's the only way the warning arrives at all.
 
 ## How it sees when you can't
 
