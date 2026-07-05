@@ -22,6 +22,13 @@ Cold open is sound-first: the cached voice line speaks on a black screen before 
 
 VO word count ≈ 85 words — under a 60-second read, leaving the cold-open voice line and the unplug pause to breathe. Read it against a stopwatch before the final export; if it runs past 58s, cut words, do not speed up.
 
+**Impact stat card (verified figures — on-screen overlay during beat 1 or 2, adds no runtime):**
+- "7,314 pedestrians killed on U.S. roads in 2023 — 77% in the dark" — NHTSA, *Pedestrians: 2023 Data* (DOT HS 813 727).
+- "Pedestrian auto-braking: no measurable benefit at night on unlit roads" — IIHS, Cicchino 2022.
+Keep it brief and uncrowded — these are the sourced figures behind the narration.
+
+**Rendered narration track:** `video/vo_narration.wav` (Piper, on-device) — a confident read that opens with the verified stat and rides the beats; use it as the VO bed or re-record it in a human voice.
+
 ## Capture dependencies (must be true before recording — CP2)
 
 Each is a hard blocker, not a nicety:
