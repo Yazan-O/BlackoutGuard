@@ -127,10 +127,6 @@ export default function App() {
         onOverride={() => doAction("override")}
         onDismiss={() => doAction("dismiss")}
       />
-
-      <footer className="footer">
-        Built during RAISE Summit · renders local event-camera perception + local Gemma advisories · nothing leaves the vehicle.
-      </footer>
     </div>
   );
 }

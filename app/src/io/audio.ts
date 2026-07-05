@@ -177,6 +177,22 @@ class SoundSpine {
       })
       .catch(() => this.spokenIds.delete(incidentId));
   }
+
+  // Decode and play a one-shot clip (a live Piper answer) through the master bus, ducking under the hum
+  // like the committed brake wav. Returns false if audio isn't enabled or the buffer won't decode.
+  async playClip(data: ArrayBuffer): Promise<boolean> {
+    if (!this.enabled || !this.ctx) return false;
+    try {
+      const audio = await this.ctx.decodeAudioData(data.slice(0));
+      const src = this.ctx.createBufferSource();
+      src.buffer = audio;
+      src.connect(this.master);
+      src.start();
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const soundSpine = new SoundSpine();

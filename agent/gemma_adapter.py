@@ -43,6 +43,28 @@ def _ollama(messages, temperature, max_tokens):
     return out["message"]["content"]
 
 
+def _ollama_stream(messages, temperature, max_tokens):
+    # Same call with stream:true — Ollama returns one JSON object per line (NDJSON); yield each
+    # content delta as it lands so the caller can forward real tokens, not a typewriter over a result.
+    body = json.dumps({
+        "model": GEMMA_MODEL, "messages": messages, "stream": True, "think": False,
+        "options": {"temperature": temperature, "num_predict": max_tokens},
+    }).encode("utf-8")
+    req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=body, method="POST",
+                                 headers={"content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for raw in resp:                      # the response object iterates line by line
+            raw = raw.strip()
+            if not raw:
+                continue
+            obj = json.loads(raw)
+            piece = obj.get("message", {}).get("content", "")
+            if piece:
+                yield piece
+            if obj.get("done"):
+                break
+
+
 def _openai(messages, temperature, max_tokens):
     if not OPENAI_API_KEY:
         raise RuntimeError("GEMMA_BACKEND=openai needs OPENAI_API_KEY (dev/test only; the product uses ollama).")
@@ -53,7 +75,31 @@ def _openai(messages, temperature, max_tokens):
     return out["choices"][0]["message"]["content"]
 
 
+def _openai_stream(messages, temperature, max_tokens):
+    if not OPENAI_API_KEY:
+        raise RuntimeError("GEMMA_BACKEND=openai needs OPENAI_API_KEY (dev/test only; the product uses ollama).")
+    body = json.dumps({
+        "model": OPENAI_MODEL, "messages": messages, "stream": True,
+        "temperature": temperature, "max_tokens": max_tokens,
+    }).encode("utf-8")
+    req = urllib.request.Request(f"{OPENAI_BASE_URL}/chat/completions", data=body, method="POST",
+                                 headers={"content-type": "application/json",
+                                          "authorization": f"Bearer {OPENAI_API_KEY}"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for raw in resp:                      # SSE: "data: {json}" lines, terminated by "data: [DONE]"
+            line = raw.decode("utf-8").strip()
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            piece = json.loads(data).get("choices", [{}])[0].get("delta", {}).get("content")
+            if piece:
+                yield piece
+
+
 _BACKENDS = {"ollama": _ollama, "openai": _openai}
+_STREAMERS = {"ollama": _ollama_stream, "openai": _openai_stream}
 
 
 def generate(messages, *, temperature=0.2, max_tokens=256):
@@ -61,3 +107,12 @@ def generate(messages, *, temperature=0.2, max_tokens=256):
     if backend is None:
         raise RuntimeError(f"unknown GEMMA_BACKEND={GEMMA_BACKEND!r} (use ollama|openai)")
     return backend(messages, temperature, max_tokens)
+
+
+def stream(messages, *, temperature=0.2, max_tokens=256):
+    # Generator of content deltas from the same backend generate() uses. Callers forward these as
+    # real streamed tokens; a backend/network failure raises here (never a fabricated token).
+    streamer = _STREAMERS.get(GEMMA_BACKEND)
+    if streamer is None:
+        raise RuntimeError(f"unknown GEMMA_BACKEND={GEMMA_BACKEND!r} (use ollama|openai)")
+    return streamer(messages, temperature, max_tokens)

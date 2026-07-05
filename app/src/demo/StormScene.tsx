@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { loadClip } from "../fixtures";
-import { EventAssetError, loadEventClip, type EventClip } from "../io/eventsLoader";
+import { EventAssetError, loadEventClip, type EventClip, type EventTier } from "../io/eventsLoader";
 import { EventCloud } from "../three/EventCloud";
 import { DetectionBox } from "../three/DetectionBox";
 import type { Incident } from "../types";
@@ -13,6 +13,12 @@ import { cachedAdvisory } from "../io/advisories";
 import { soundSpine } from "../io/audio";
 import { useSoundSpine, useSpineStatus } from "./useSoundSpine";
 import { LowerThird, type AdvisoryLine } from "./LowerThird";
+import { OperatorConsole } from "../ui/OperatorConsole";
+import { KillSwitch } from "../ui/KillSwitch";
+
+// 260ms decay leaves a short motion trail so the silhouette accumulates across frames and the eye
+// tracks it (the doc's "condenses out of the noise as coherent motion"). Longer smears the figure.
+const STORM_DECAY_MS = 260;
 
 export function StormScene({ clipId }: { clipId: string }) {
   const [clip, setClip] = useState<EventClip | null>(null);
@@ -40,7 +46,10 @@ export function StormScene({ clipId }: { clipId: string }) {
     let gone = false;
     setClip(null);
     setError(null);
-    loadEventClip(clipId)
+    // ?tier=lite forces the committed downsampled buffer (for a weak GPU); default hero renders the
+    // dense full-res tier, falling back to lite loudly if that buffer isn't present.
+    const preferred: EventTier = new URLSearchParams(location.search).get("tier") === "lite" ? "lite" : "hero";
+    loadEventClip(clipId, preferred)
       .then((c) => {
         if (gone) return;
         const records = loadClip(clipId);
@@ -91,7 +100,7 @@ export function StormScene({ clipId }: { clipId: string }) {
       <header className="storm-top">
         <div className="brand">
           <span className="brand-name">BlackoutGuard</span>
-          <span className="brand-sub">night witness · {clipId}</span>
+          <span className="brand-sub">night witness · {clipId}{clip ? ` · ${clip.tier}` : ""}</span>
         </div>
         <OfflineBadge />
       </header>
@@ -104,7 +113,7 @@ export function StormScene({ clipId }: { clipId: string }) {
           gl={{ antialias: false, powerPreference: "high-performance" }}
         >
           <color attach="background" args={["#020204"]} />
-          <EventCloud clip={clip} />
+          <EventCloud clip={clip} decayMs={STORM_DECAY_MS} />
           <DetectionBox frame={clip.meta.frame} />
         </Canvas>
       )}
@@ -113,6 +122,8 @@ export function StormScene({ clipId }: { clipId: string }) {
 
       <FilmAdvisory />
       <UnplugCue />
+      <KillSwitch />
+      <OperatorConsole />
       <StormControls />
       <SoundToggle />
       <a className="storm-fallback" href="?simple">

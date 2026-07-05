@@ -1,0 +1,337 @@
+/* S4 "Interrogation" UI — the in-scene operator console, token stream, kill switch, and voice loop.
+   Kept in its own stylesheet (imported by OperatorConsole) rather than the shared index.css so the
+   Storm overlay styles stay self-contained. Global class names, same tokens as index.css. */
+
+.op-console {
+  position: absolute;
+  top: 72px;
+  right: 20px;
+  z-index: 3;
+  width: 360px;
+  max-width: 42vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(2, 2, 4, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--mono);
+}
+.op-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.op-title {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+.op-ctx {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+.op-ask {
+  display: flex;
+  gap: 8px;
+}
+.op-ask input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.op-ask input:focus {
+  outline: none;
+  border-color: var(--muted);
+}
+.op-ask button {
+  flex: none;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+.op-ask button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.op-note {
+  font-size: 12px;
+  color: var(--amber);
+}
+.op-transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 30vh;
+  overflow: auto;
+}
+.op-transcript li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--line);
+  padding-left: 8px;
+}
+.op-q {
+  font-size: 11px;
+  color: var(--muted);
+}
+.op-a {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+/* Token stream: the just-arrived tail fades in from faint (real tokens resolving), and the
+   chain-of-custody stamp names the on-device model + the measured elapsed seconds. */
+.token-stream {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.token-stream.is-streaming {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.ts-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ts-fresh {
+  animation: ts-resolve 0.42s ease-out;
+}
+@keyframes ts-resolve {
+  from {
+    opacity: 0.15;
+    filter: blur(1.2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+.ts-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1.02em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--green);
+  animation: ts-blink 1s step-end infinite;
+}
+@keyframes ts-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.ts-stamp {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--green);
+  opacity: 0.85;
+}
+
+/* Override beat: the dismiss control and the agent's downgraded follow-up for a later similar caution. */
+.op-actions {
+  display: flex;
+  gap: 8px;
+}
+.op-dismiss {
+  flex: 1 1 auto;
+  background: transparent;
+  color: var(--amber);
+  border: 1px solid rgba(245, 165, 36, 0.5);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.op-dismiss:hover:not(:disabled) {
+  border-color: var(--amber);
+}
+.op-dismiss:disabled {
+  color: var(--muted);
+  border-color: var(--line);
+  cursor: default;
+}
+.op-softened {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(20, 21, 25, 0.9);
+  border: 1px solid rgba(245, 165, 36, 0.35);
+  border-left: 3px solid var(--amber);
+  border-radius: 6px;
+}
+.op-softened-tag {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #000;
+  background: var(--amber);
+  border-radius: 3px;
+  padding: 2px 7px;
+}
+.op-softened-adv {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.35;
+}
+.op-softened-note {
+  font-size: 11px;
+  color: var(--amber);
+}
+.op-softened-id {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Kill switch: a breaker mirroring real network state; throwing it drives the Stage-2 unplug (silence). */
+.kill-switch {
+  position: absolute;
+  top: 72px;
+  left: 20px;
+  z-index: 3;
+  width: 232px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(2, 2, 4, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--mono);
+}
+.kill-switch.thrown {
+  border-color: rgba(138, 143, 152, 0.5);
+}
+.ks-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ks-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.ks-state {
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.85;
+}
+.kill-switch.armed .ks-state {
+  color: var(--green);
+}
+.ks-lever {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 54px;
+  padding: 6px 0;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.ks-lever:hover:not(:disabled) {
+  border-color: var(--red);
+}
+.ks-lever:disabled {
+  cursor: default;
+}
+.ks-knob {
+  width: 30px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--green);
+  transform: translateY(-3px);
+  transition: transform 0.18s, background 0.18s;
+}
+.kill-switch.thrown .ks-knob {
+  background: var(--muted);
+  transform: translateY(6px);
+}
+.ks-lever-text {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+.kill-switch.thrown .ks-lever-text {
+  color: var(--muted);
+}
+
+/* Voice loop mic control. */
+.op-mic {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+.op-mic:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--muted);
+}
+.op-mic:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.op-mic-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.op-mic.rec {
+  color: var(--red);
+  border-color: rgba(255, 45, 45, 0.5);
+}
+.op-mic.rec .op-mic-dot {
+  background: var(--red);
+  animation: op-mic-pulse 1s ease-in-out infinite;
+}
+@keyframes op-mic-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}

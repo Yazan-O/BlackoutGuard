@@ -24,61 +24,52 @@ export function OperatorConsole({
   onDismiss: () => void;
 }) {
   const [q, setQ] = useState("");
+  const last = log[0];
+
+  if (!incident) {
+    return (
+      <section className="console">
+        <span className="console-idle">No active incident</span>
+      </section>
+    );
+  }
 
   return (
     <section className="console">
-      <div className="console-incident">
-        {incident ? (
-          <>
-            <div className="incident-id">{incident.incident_id}</div>
-            <div className="incident-meta">
-              frame {incident.frame_idx} · t={incident.t_video_s.toFixed(2)}s · {incident.detections.length} detection(s)
-            </div>
-            <div className="console-actions">
-              <button className="btn override" onClick={onOverride} disabled={overridden}>
-                {overridden ? "Overridden" : "Override"}
+      <div className="console-row">
+        <div className="console-subject">
+          <span className="incident-id">{incident.incident_id}</span>
+          <span className="incident-meta">
+            frame {incident.frame_idx} · t={incident.t_video_s.toFixed(2)}s · {incident.detections.length} detection(s)
+          </span>
+        </div>
+        <div className="console-actions">
+          <button className="btn" onClick={onOverride} disabled={overridden}>
+            {overridden ? "Overridden" : "Override"}
+          </button>
+          <button className="btn" onClick={onDismiss}>
+            Dismiss
+          </button>
+          {agentConfigured && (
+            <form
+              className="console-ask"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const text = q.trim();
+                if (!text) return;
+                onAsk(text);
+                setQ("");
+              }}
+            >
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask the on-device agent…" />
+              <button className="btn" type="submit">
+                Ask
               </button>
-              <button className="btn dismiss" onClick={onDismiss}>
-                Dismiss
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="incident-meta">No active incident</div>
-        )}
+            </form>
+          )}
+        </div>
       </div>
-
-      <form
-        className="console-ask"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const text = q.trim();
-          if (!text) return;
-          onAsk(text);
-          setQ("");
-        }}
-      >
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ask the on-device agent about this incident…"
-          disabled={!incident}
-        />
-        <button className="btn ask" type="submit" disabled={!incident}>
-          Ask
-        </button>
-      </form>
-      <div className="console-agent-state">
-        {agentConfigured ? "local agent endpoint set" : "local agent not connected — actions logged on-device"}
-      </div>
-
-      <ul className="console-log">
-        {log.map((e, i) => (
-          <li key={i} className={`log-${e.kind}`}>
-            {e.text}
-          </li>
-        ))}
-      </ul>
+      {last && <div className={`console-last log-${last.kind}`}>{last.text}</div>}
     </section>
   );
 }

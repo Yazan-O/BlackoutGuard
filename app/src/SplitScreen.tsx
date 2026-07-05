@@ -56,7 +56,7 @@ export function SplitScreen({
     const ctx = overlay.current!.getContext("2d")!;
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     if (!incident) return;
-    ctx.font = "12px system-ui, sans-serif";
+    ctx.font = "11px ui-monospace, monospace";
     for (const d of incident.detections) {
       const [x, y, w, h] = d.bbox;
       const rx = x * SCALE;
@@ -76,10 +76,6 @@ export function SplitScreen({
   return (
     <div className="split">
       <section className="panel">
-        <div className="panel-head">
-          <span className="panel-title">RGB CAMERA</span>
-          <span className={`panel-state ${blind ? "blind" : "live"}`}>{blind ? "BLIND" : "LIVE"}</span>
-        </div>
         <div className="canvas-wrap">
           <video
             ref={rgbVid}
@@ -93,17 +89,14 @@ export function SplitScreen({
             onError={() => setVideoOk(false)}
           />
           {!videoOk && (
-            <div className="clip-placeholder">{blind ? "RGB CAMERA · BLIND" : "RGB feed · clip asset pending"}</div>
+            <div className="clip-placeholder">{blind ? "RGB · dark" : "RGB feed · clip asset pending"}</div>
           )}
+          <span className="panel-label">RGB</span>
           {incident && blind && <BlindnessTimer targetS={incident.blindness_duration_s} />}
         </div>
       </section>
 
       <section className="panel">
-        <div className="panel-head">
-          <span className="panel-title">EVENT CAMERA</span>
-          <span className="panel-state sees">SEES</span>
-        </div>
         <div className="canvas-wrap">
           <video
             ref={evtVid}
@@ -117,6 +110,7 @@ export function SplitScreen({
             onError={() => setVideoOk(false)}
           />
           {!videoOk && <div className="clip-placeholder">event stream · clip asset pending</div>}
+          <span className="panel-label">EVENT</span>
           <canvas ref={overlay} className="overlay" width={CANVAS_W} height={CANVAS_H} />
         </div>
       </section>

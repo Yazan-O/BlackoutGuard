@@ -57,6 +57,88 @@ export async function askAgent(question: string, incidentId: string): Promise<st
   }
 }
 
+// Streaming Q&A: the bridge answers /ask with stream:true as NDJSON — one {"delta"} per real Gemma
+// token, then {"done":true}, or a trailing {"error"} if the local model drops. onDelta receives the
+// accumulating answer so the console shows the true token stream. Resolves to the final answer, or
+// null if nothing usable streamed (agent absent/down) — the caller degrades honestly, never fabricates.
+export async function askStream(
+  question: string,
+  incidentId: string,
+  onDelta: (full: string) => void,
+): Promise<string | null> {
+  if (!BASE) return null;
+  try {
+    const res = await fetch(`${BASE}/ask`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question, incident_id: incidentId, stream: true }),
+    });
+    if (!res.ok || !res.body) return null;
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let full = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let obj: { delta?: string; done?: boolean; error?: string };
+        try {
+          obj = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (obj.error) return full || null; // model dropped mid-stream — surface what really arrived
+        if (obj.done) return full || null;
+        if (typeof obj.delta === "string") {
+          full += obj.delta;
+          onDelta(full);
+        }
+      }
+    }
+    return full || null;
+  } catch {
+    return null;
+  }
+}
+
+export interface SoftenedNote {
+  class: string;
+  corrected_at: string | null;
+  note: string; // the agent's own audit line, e.g. "downgraded — you corrected me at 14:32"
+}
+
+// Re-ask the agent for an incident's advisory after an override — force=true bypasses the idempotent
+// cache so a dismissal's softening actually applies. Returns the agent's real (re-generated) line plus
+// its audit annotation, or null when the agent is absent/down. The console fabricates neither.
+export async function reAdvise(
+  record: Incident,
+): Promise<{ advisory: string | null; softened: SoftenedNote | null } | null> {
+  if (!BASE) return null;
+  try {
+    const res = await fetch(`${BASE}/advisory`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...record, force: true }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rec = Array.isArray(data?.records) ? data.records[0] : data;
+    if (!rec) return null;
+    return {
+      advisory: typeof rec.advisory === "string" ? rec.advisory : null,
+      softened: (rec.softened as SoftenedNote) ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function postAction(incidentId: string, action: OperatorAction): Promise<boolean> {
   if (!BASE) return false;
   try {

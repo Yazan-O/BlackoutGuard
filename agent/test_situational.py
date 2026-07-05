@@ -49,7 +49,7 @@ def main():
         sit.ingest(_info(f"test-00010{i}", track_id=42))   # three frames, one rider
     sit.ingest(_info("test-000200", track_id=99))          # a second, distinct road user
     digest = sit._digest()
-    assert "2 distinct tracked road users" in digest, digest
+    assert "2 distinct road users" in digest, digest
 
     # 5) Operator dismiss softens that road-user class for the next similar caution.
     sit.override("test-000200", "dismiss", note=None)
