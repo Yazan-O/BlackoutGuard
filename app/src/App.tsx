@@ -7,6 +7,10 @@ import { SplitScreen } from "./SplitScreen";
 import { OperatorConsole, type LogEntry } from "./OperatorConsole";
 import { agentConfigured, askAgent, fetchAdvisory, postAction } from "./agent";
 import { usePlayback } from "./usePlayback";
+import { useOperatorSound } from "./useOperatorSound";
+import { useSpineStatus } from "./demo/useSoundSpine";
+import { soundSpine } from "./io/audio";
+import { cachedAdvisory } from "./io/advisories";
 import { PlaybackControls } from "./PlaybackControls";
 
 function activeClipId(): string {
@@ -29,6 +33,20 @@ export default function App() {
   const overridden = incident ? overrides.has(incident.incident_id) : false;
   const agentOn = agentConfigured();
 
+  // Sound is the shared on-device spine (io/audio.ts) — the same engine the film view uses, so there
+  // is one audio system. Its AudioContext can only start after a user gesture (autoplay policy); arm
+  // it on the first one. useOperatorSound drives hum/heartbeat, the spoken brake line, and the unplug.
+  useEffect(() => {
+    const arm = () => soundSpine.enable();
+    window.addEventListener("pointerdown", arm, { once: true });
+    window.addEventListener("keydown", arm, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
+  useOperatorSound(incident, playback.t);
+
   // Prefer the agent's live advisory (Gemma is the point of the track); fall back to the record's
   // baked line, then a neutral placeholder. Keyed on incident_id so it's fetched once.
   useEffect(() => {
@@ -45,7 +63,11 @@ export default function App() {
     // keyed on the incident id, not the record object (which is recomputed each render)
   }, [incident?.incident_id, agentOn]);
 
-  const displayedAdvisory = incident ? advisories[incident.incident_id] ?? incident.advisory ?? null : null;
+  // Prefer the agent's live line; fall back to the committed cache (real Gemma text, offline-safe),
+  // then the fixture field. cachedAdvisory keeps the banner truthful even with the agent down.
+  const displayedAdvisory = incident
+    ? advisories[incident.incident_id] ?? cachedAdvisory(incident.incident_id) ?? incident.advisory ?? null
+    : null;
 
   const append = (text: string, kind: LogEntry["kind"]) => setLog((l) => [{ text, kind }, ...l]);
 
@@ -77,7 +99,10 @@ export default function App() {
           <span className="brand-name">BlackoutGuard</span>
           <span className="brand-sub">on-device road-safety agent</span>
         </div>
-        <OfflineBadge />
+        <div className="topbar-right">
+          <SoundToggle />
+          <OfflineBadge />
+        </div>
       </header>
 
       {records.length === 0 ? (
@@ -107,5 +132,18 @@ export default function App() {
         Built during RAISE Summit · renders local event-camera perception + local Gemma advisories · nothing leaves the vehicle.
       </footer>
     </div>
+  );
+}
+
+function SoundToggle() {
+  const { enabled, muted } = useSpineStatus();
+  const label = !enabled ? "enable sound" : muted ? "sound off" : "sound on";
+  return (
+    <button
+      className={`sound-toggle ${enabled && !muted ? "on" : ""}`}
+      onClick={() => (soundSpine.enabled ? soundSpine.setMuted(!soundSpine.muted) : soundSpine.enable())}
+    >
+      {label}
+    </button>
   );
 }

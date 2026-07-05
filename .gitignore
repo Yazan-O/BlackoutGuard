@@ -56,6 +56,7 @@ video/assets/
 Thumbs.db
 .vscode/
 .idea/
+.claude/launch.json
 
 # COMMIT these (do NOT ignore) — needed for a fresh clone to run the demo:
 #   contracts/fixtures/*.json   (baked detections)
