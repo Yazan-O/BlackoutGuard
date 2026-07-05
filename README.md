@@ -1,14 +1,26 @@
-# BlackoutGuard
+<div align="center">
 
-![One instant from a night drive: the left RGB camera is dark and blind while the right event camera sees the whole street and the detector boxes the road users.](docs/hero.png)
+# BlackoutGuard
 
 **It sees the person your headlights can't — and reasons about it on-device, with the network unplugged.**
 
-Built for the Google DeepMind Gemma Edge (on-device) track.
+Proud submission to the **Google DeepMind Gemma Edge** on-device track
+
+**Team BlackoutGuard**<br>
+Mohamad Yazan Sadoun · University of Oklahoma, INQUIRE Lab<br>
+Abdullah Osman · University of Istanbul
+
+</div>
+
+![One instant from a night drive: the left RGB camera is dark and blind while the right event camera sees the whole street and the detector boxes the road users.](docs/hero.png)
+
+<div align="center">
 
 ![Gemma Edge on-device track · runs offline · Gemma 4 local · MIT](docs/badges.png)
 
 **60-second demo:** _link added when the cut is uploaded._
+
+</div>
 
 ---
 
@@ -20,21 +32,9 @@ Built for the Google DeepMind Gemma Edge (on-device) track.
 
 ## How it sees when you can't
 
-The frame at the top is one instant from `clip_zc09a`: on the left, the RGB camera at luma 18 — effectively blind; on the right, the event camera seeing the same street with the detector boxing the road users. That detection becomes a structured incident, and Gemma turns it into an advisory. Every step runs on the device.
+The frame at the top is one instant from `clip_zc09a`: on the left, the RGB camera at luma 18 — effectively blind; on the right, the event camera seeing the same street with the detector boxing the road users. That detection becomes a structured incident, Gemma turns it into an advisory, and the voice speaks it. Every step runs on the device, in three moves: see, reason, act.
 
-```mermaid
-flowchart LR
-  subgraph vehicle["On the vehicle — nothing leaves"]
-    direction LR
-    cam["Event camera"] --> det["Local detector"]
-    det --> inc["Incident record"]
-    inc --> gemma["Gemma 4 · local via Ollama"]
-    gemma --> adv["Advisory"]
-    adv --> voice["On-device voice"]
-  end
-  cloud["Cloud / API"]
-  vehicle -.->|never called| cloud
-```
+![Pipeline diagram: inside a sealed "in the vehicle, nothing leaves" boundary, event camera and detector see, incident and Gemma 4 (local) reason, advisory and voice act; a cloud node sits outside, marked never called.](docs/pipeline.png)
 
 Here is the event stream itself, rendered on the device — each point is a brightness change a normal camera missed, the red box a road user tracked in the dark:
 
