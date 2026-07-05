@@ -47,11 +47,11 @@ Here is the event stream itself, rendered on the device — each point is a brig
 Prerequisites: [Ollama](https://ollama.com), Node.js 18+ (`npm`), Python 3.10+.
 
 ```
-ollama pull gemma4:12b     # one-time, needs network; the local reasoning model
+ollama pull gemma4:e4b-it-qat     # one-time, needs network; the local reasoning model
 bash run_demo.sh           # Windows: powershell -File run_demo.ps1
 ```
 
-`run_demo.sh` starts Ollama and warms `gemma4:12b` locally, starts the situational-agent server, installs and serves the app, and opens it. When all three are up it prints `ALL LOCAL — SAFE TO UNPLUG`. Open the app at **http://localhost:5173** — a split screen (RGB-blind left, event-camera detections right), an advisory banner that escalates by severity, a blindness timer, an on-device/offline badge, and an operator console (ask a question, Override, Dismiss).
+`run_demo.sh` starts Ollama and warms `gemma4:e4b-it-qat` locally, starts the situational-agent server, installs and serves the app, and opens it. When all three are up it prints `ALL LOCAL — SAFE TO UNPLUG`. Open the app at **http://localhost:5173** — a split screen (RGB-blind left, event-camera detections right), an advisory banner that escalates by severity, a blindness timer, an on-device/offline badge, and an operator console (ask a question, Override, Dismiss).
 
 Prove the offline claim without a live cut:
 
@@ -61,7 +61,7 @@ bash voice/check_offline.sh          # Windows: powershell -File voice/check_off
 
 It generates the advisory from local Gemma, resolves the cached voice line, and confirms Ollama is bound to loopback only — no external network. On a machine with network-admin rights, `check_offline.ps1 -Drop` (or `check_offline.sh`) physically disables the adapter for the real cable-pull and restores it afterward.
 
-On a laptop or edge device, set `GEMMA_MODEL=gemma4:e4b-it-qat` — the same agent runs on the smaller on-device tier.
+On a bigger box, set `GEMMA_MODEL=gemma4:12b` for the larger tier — the default `gemma4:e4b-it-qat` already runs on a laptop or edge device.
 
 ## Tools & data (disclosed) vs built during the event
 
@@ -74,7 +74,7 @@ Baked detections are precomputed by our RVT-based detector — a disclosed tool 
 
 ## How we used Gemma (locally, offline)
 
-Gemma 4 is the reasoning engine, served locally through Ollama (`gemma4:12b`) on the vehicle's own compute — no cloud, no API keys, `http://localhost:11434` only. It does three things over the [incident schema](contracts/incident_schema.json):
+Gemma 4 is the reasoning engine, served locally through Ollama (`gemma4:e4b-it-qat`) on the vehicle's own compute — no cloud, no API keys, `http://localhost:11434` only. It does three things over the [incident schema](contracts/incident_schema.json):
 
 - **Advisory.** For each `caution`/`brake` incident, the agent hands Gemma the derived facts (class, side, proximity, confidence, how long the RGB camera has been blind) and Gemma writes one terse spoken warning — e.g. `Brake — rider in near zone, left side.` The fixture ships that field as `null`; Gemma fills it. The first time an incident is seen Gemma generates the line and the agent caches it ([`agent/cache/`](agent/cache)), so replay serves the same line deterministically with the network unplugged.
 - **Operator Q&A (live).** The operator asks in natural language ("how many times was I blinded near a pedestrian tonight?"); `POST /ask` sends the incident-log digest to Gemma and returns the answer. This is a live local Gemma call each time — no cache — and it works with the network physically down because the model runs on the device.

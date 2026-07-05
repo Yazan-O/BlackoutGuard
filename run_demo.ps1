@@ -4,7 +4,7 @@ Set-Location $PSScriptRoot
 $BANNER = "ALL LOCAL " + [char]0x2014 + " SAFE TO UNPLUG"
 
 if (-not $env:OLLAMA_MODELS) { $env:OLLAMA_MODELS = Join-Path $HOME "ollama-models" }
-$GemmaModel = if ($env:GEMMA_MODEL) { $env:GEMMA_MODEL } else { "gemma4:12b" }
+$GemmaModel = if ($env:GEMMA_MODEL) { $env:GEMMA_MODEL } else { "gemma4:e4b-it-qat" }  # on-device edge tier; bigger box: gemma4:12b
 $OllamaUrl  = if ($env:OLLAMA_URL)  { $env:OLLAMA_URL }  else { "http://localhost:11434" }
 $AppUrl     = if ($env:APP_URL)     { $env:APP_URL }     else { "http://localhost:5173" }
 $AgentUrl   = if ($env:AGENT_URL)   { $env:AGENT_URL }   else { "http://localhost:8000" }

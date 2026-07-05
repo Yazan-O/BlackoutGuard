@@ -6,7 +6,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."   # repo root
 
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
-GEMMA_MODEL="${GEMMA_MODEL:-gemma4:12b}"
+GEMMA_MODEL="${GEMMA_MODEL:-gemma4:e4b-it-qat}"
 AGENT_URL="${AGENT_URL:-http://127.0.0.1:8000}"
 PY="${PYTHON:-python3}"
 FIX="contracts/fixtures/clip03.json"
@@ -55,7 +55,7 @@ msgs = [{"role":"system","content":"You are BlackoutGuard, an on-device driving-
 print(generate(msgs).strip())
 PY
 ) || fail "local Gemma did not answer (is ollama serving and $GEMMA_MODEL pulled?)"
-[ -n "$ADV" ] || fail "local Gemma returned empty content (gemma4:12b reasoning-model failure) — refusing to claim the advisory was generated locally"
+[ -n "$ADV" ] || fail "local Gemma returned empty content — refusing to claim the advisory was generated locally"
 say "      Gemma (local): $ADV"
 
 say "[3/4] cached advisory wav resolves — no synthesis, no network ..."

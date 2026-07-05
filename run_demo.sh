@@ -5,7 +5,7 @@ set -uo pipefail
 cd "$(dirname "$0")"
 
 export OLLAMA_MODELS="${OLLAMA_MODELS:-$HOME/ollama-models}"
-GEMMA_MODEL="${GEMMA_MODEL:-gemma4:12b}"    # laptop/edge tier: gemma4:e4b-it-qat
+GEMMA_MODEL="${GEMMA_MODEL:-gemma4:e4b-it-qat}"    # on-device edge tier (6.1GB, fits 16GB laptops); bigger box: gemma4:12b
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 APP_URL="${APP_URL:-http://localhost:5173}"
 AGENT_URL="${AGENT_URL:-http://localhost:8000}"
